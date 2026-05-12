@@ -1,0 +1,112 @@
+╔══════════════════════════════════════════════════════════╗
+║   🚀  DATA ENGINEERING & SCIENCE — GUIA COMPLETO  🚀     ║
+║        Do Zero ao Avançado · Em Português · BR           ║
+╚══════════════════════════════════════════════════════════╝
+Repositório de estudos estruturado do nível Básico ao Avançado
+Databricks · Apache Spark · Python · MongoDB · Power BI · SQL · Cloud
+</div>
+
+🗺️ Mapa de Estudos
+TRILHA COMPLETA DE DADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🟢 BÁSICO           🟡 INTERMEDIÁRIO        🔴 AVANÇADO
+  ──────────          ────────────────        ───────────
+  Python Core         Pandas Avançado         PySpark Avançado
+  SQL Fundamentos     SparkSQL                Delta Lake
+  Git & GitHub        MongoDB Avançado        Databricks MLflow
+  Power BI Intro      APIs REST               Streaming (Kafka)
+  MongoDB Intro       ETL Pipelines           Arquitetura Lambda
+  Spark Intro         Power BI DAX            Data Mesh
+                      Databricks Básico       Otimização & Tuning
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 Estrutura do Repositório
+📦 data-engineering-study/
+│
+├── 📄 README.md                        ← Você está aqui
+│
+├── 🐍 01_python/
+│   ├── README.md                       ← Roadmap Python
+│   ├── basico/                         ← Sintaxe, tipos, funções
+│   ├── intermediario/                  ← OOP, decorators, generators
+│   └── avancado/                       ← Async, metaclasses, performance
+│
+├── ⚡ 02_spark/
+│   ├── README.md                       ← Roadmap Spark
+│   ├── basico/                         ← RDD, DataFrames, SparkSQL
+│   ├── intermediario/                  ← Joins, UDFs, otimização
+│   └── avancado/                       ← Streaming, MLlib, tunning
+│
+├── 🧱 03_databricks/
+│   ├── README.md                       ← Roadmap Databricks
+│   ├── basico/                         ← Workspace, notebooks, clusters
+│   ├── intermediario/                  ← Delta Lake, Unity Catalog
+│   └── avancado/                       ← MLflow, Jobs, CI/CD
+│
+├── 🍃 04_mongodb/
+│   ├── README.md                       ← Roadmap MongoDB
+│   ├── basico/                         ← CRUD, documentos, coleções
+│   ├── intermediario/                  ← Aggregations, índices
+│   └── avancado/                       ← Replica Sets, Sharding
+│
+├── 📊 05_powerbi/
+│   ├── README.md                       ← Roadmap Power BI
+│   ├── basico/                         ← Interface, conexões, visuais
+│   ├── intermediario/                  ← DAX, relacionamentos
+│   └── avancado/                       ← Row-Level Security, API
+│
+├── 🗄️ 06_sql/
+│   ├── README.md                       ← Roadmap SQL
+│   ├── basico/                         ← SELECT, WHERE, JOIN
+│   ├── intermediario/                  ← Window Functions, CTEs
+│   └── avancado/                       ← Query Optimization, Execution Plans
+│
+├── ☁️ 07_cloud/
+│   ├── README.md                       ← Azure, AWS, GCP
+│   └── azure_data_factory/
+│
+├── 🔧 08_projetos/
+│   ├── pipeline_etl_completo/
+│   ├── dashboard_powerbi/
+│   └── ml_pipeline_databricks/
+│
+└── 📚 recursos/
+    ├── livros.md
+    ├── cursos.md
+    └── cheatsheets/
+
+🎯 Por onde começar?
+👶 Sou iniciante total
+1️⃣  Python Básico          → /01_python/basico/
+2️⃣  SQL Fundamentos        → /06_sql/basico/
+3️⃣  MongoDB Intro          → /04_mongodb/basico/
+4️⃣  Power BI Intro         → /05_powerbi/basico/
+🧑‍💻 Já sei programar, quero dados
+1️⃣  Python para Dados      → /01_python/intermediario/
+2️⃣  SQL Avançado           → /06_sql/intermediario/
+3️⃣  Spark Introdução       → /02_spark/basico/
+4️⃣  Databricks Básico      → /03_databricks/basico/
+🚀 Quero ser Engenheiro de Dados
+1️⃣  Spark Avançado         → /02_spark/avancado/
+2️⃣  Databricks Completo    → /03_databricks/
+3️⃣  Delta Lake & Lakehouse → /03_databricks/intermediario/
+4️⃣  Cloud (Azure/AWS)      → /07_cloud/
+
+📊 Progresso de Conteúdo
+MóduloBásicoIntermediárioAvançado🐍 Python✅ Pronto✅ Pronto🔄 Em andamento⚡ Spark✅ Pronto✅ Pronto🔄 Em andamento🧱 Databricks✅ Pronto🔄 Em andamento🧪 Planejado🍃 MongoDB✅ Pronto✅ Pronto🔄 Em andamento📊 Power BI✅ Pronto🔄 Em andamento🧪 Planejado🗄️ SQL✅ Pronto✅ Pronto🔄 Em andamento☁️ Cloud🧪 Planejado🧪 Planejado🧪 Planejado
+
+🤝 Como Contribuir
+
+Faça um fork do repositório
+Crie uma branch: git checkout -b feature/novo-conteudo
+Commit suas mudanças: git commit -m 'Add: conteúdo sobre X'
+Push: git push origin feature/novo-conteudo
+Abra um Pull Request
+
+
+<div align="center">
+⭐ Se este repositório está te ajudando, deixe uma estrela!
+Feito para a comunidade de dados brasileira 🇧🇷
+</div>

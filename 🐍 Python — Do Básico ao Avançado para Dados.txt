@@ -1,0 +1,682 @@
+# 🐍 Python — Do Básico ao Avançado para Dados
+
+> **Objetivo:** Dominar Python com foco em Engenharia e Ciência de Dados  
+> **Duração estimada:** 8 a 12 semanas  
+> **Pré-requisito:** Lógica de programação (desejável, não obrigatório)
+
+---
+
+## 🗺️ Roadmap
+
+```
+SEMANA 1-2      SEMANA 3-4        SEMANA 5-6         SEMANA 7-8+
+──────────      ──────────        ──────────         ──────────
+Sintaxe         Funções           OOP                Async/Await
+Tipos           List Comp         Decorators         Performance
+Estruturas      Dicionários       Generators         Metaclasses
+Controle        Módulos           Context Managers   Design Patterns
+Loops           Exceções          Testes             Packaging
+```
+
+---
+
+## 🟢 NÍVEL BÁSICO
+
+### 1. Instalação e Ambiente
+
+```bash
+# Verificar versão
+python --version   # Use Python 3.10+
+
+# Criar ambiente virtual
+python -m venv .venv
+source .venv/bin/activate      # Linux/Mac
+.venv\Scripts\activate         # Windows
+
+# Instalar dependências essenciais
+pip install pandas numpy matplotlib seaborn jupyter
+```
+
+### 2. Tipos de Dados Fundamentais
+
+```python
+# ── Números ──────────────────────────────────────────────
+inteiro    = 42
+flutuante  = 3.14
+complexo   = 2 + 3j
+
+# ── Strings ──────────────────────────────────────────────
+nome = "João Silva"
+cidade = 'Recife'
+
+# f-string (preferível ao format())
+mensagem = f"Olá, {nome}! Bem-vindo a {cidade}."
+print(mensagem)  # Olá, João Silva! Bem-vindo a Recife.
+
+# Métodos úteis de string
+print(nome.upper())           # JOÃO SILVA
+print(nome.lower())           # joão silva
+print(nome.replace("João", "Maria"))  # Maria Silva
+print(nome.split(" "))        # ['João', 'Silva']
+print(len(nome))              # 10
+
+# ── Booleanos ─────────────────────────────────────────────
+ativo = True
+inativo = False
+print(type(ativo))  # <class 'bool'>
+```
+
+### 3. Estruturas de Dados
+
+```python
+# ── Lista (mutável, ordenada) ─────────────────────────────
+tecnologias = ["Python", "Spark", "MongoDB", "Databricks"]
+tecnologias.append("Power BI")
+tecnologias.insert(0, "SQL")
+tecnologias.remove("MongoDB")
+print(tecnologias[0])         # SQL
+print(tecnologias[-1])        # Power BI
+print(tecnologias[1:3])       # ['Python', 'Spark']
+
+# ── Tupla (imutável, ordenada) ────────────────────────────
+coordenadas = (-8.0578, -34.8829)   # Recife, PE
+lat, lon = coordenadas               # Unpacking
+print(f"Latitude: {lat}, Longitude: {lon}")
+
+# ── Dicionário (chave-valor) ──────────────────────────────
+perfil = {
+    "nome": "João",
+    "cargo": "Data Engineer",
+    "stack": ["Python", "Spark", "Databricks"],
+    "nivel": 3,
+    "ativo": True
+}
+
+print(perfil["nome"])                     # João
+print(perfil.get("email", "não informado"))  # não informado
+perfil["empresa"] = "TechBR"             # Adicionar
+del perfil["nivel"]                       # Remover
+
+# Iterando dicionário
+for chave, valor in perfil.items():
+    print(f"{chave}: {valor}")
+
+# ── Set (único, não ordenado) ─────────────────────────────
+habilidades = {"Python", "SQL", "Python", "Spark"}
+print(habilidades)  # {'Python', 'SQL', 'Spark'} — sem duplicatas
+
+conjunto_a = {1, 2, 3, 4}
+conjunto_b = {3, 4, 5, 6}
+print(conjunto_a & conjunto_b)  # Interseção: {3, 4}
+print(conjunto_a | conjunto_b)  # União: {1, 2, 3, 4, 5, 6}
+print(conjunto_a - conjunto_b)  # Diferença: {1, 2}
+```
+
+### 4. Controle de Fluxo
+
+```python
+# ── If / Elif / Else ──────────────────────────────────────
+salario = 8500
+
+if salario < 3000:
+    faixa = "Júnior"
+elif salario < 7000:
+    faixa = "Pleno"
+elif salario < 15000:
+    faixa = "Sênior"
+else:
+    faixa = "Especialista"
+
+print(f"Faixa: {faixa}")  # Faixa: Sênior
+
+# Ternário (uma linha)
+status = "aprovado" if salario > 5000 else "reprovado"
+
+# ── For Loop ──────────────────────────────────────────────
+frutas = ["maçã", "banana", "uva"]
+
+for i, fruta in enumerate(frutas):
+    print(f"{i+1}. {fruta}")
+
+# Range
+for i in range(0, 10, 2):    # 0, 2, 4, 6, 8
+    print(i)
+
+# ── While ─────────────────────────────────────────────────
+contador = 0
+while contador < 5:
+    print(f"Contagem: {contador}")
+    contador += 1
+
+# ── Comprehensions ────────────────────────────────────────
+# Lista
+quadrados = [x**2 for x in range(1, 11)]
+
+# Com filtro
+pares = [x for x in range(20) if x % 2 == 0]
+
+# Dicionário
+quadrados_dict = {x: x**2 for x in range(1, 6)}
+# {1: 1, 2: 4, 3: 9, 4: 16, 5: 25}
+
+# Set
+letras_unicas = {letra for letra in "engenharia de dados"}
+```
+
+### 5. Funções
+
+```python
+# ── Função básica ─────────────────────────────────────────
+def saudacao(nome, cargo="Analista"):
+    """Retorna uma saudação personalizada."""
+    return f"Olá, {nome}! Cargo: {cargo}"
+
+print(saudacao("Maria"))                  # Usa default
+print(saudacao("Pedro", "Engenheiro"))    # Sobrescreve default
+
+# ── *args e **kwargs ──────────────────────────────────────
+def somar(*numeros):
+    return sum(numeros)
+
+print(somar(1, 2, 3, 4, 5))  # 15
+
+def exibir_perfil(**dados):
+    for chave, valor in dados.items():
+        print(f"  {chave}: {valor}")
+
+exibir_perfil(nome="João", cidade="Recife", nivel="Sênior")
+
+# ── Lambda ────────────────────────────────────────────────
+dobro = lambda x: x * 2
+print(dobro(7))   # 14
+
+# Muito usado com sorted, filter, map
+dados = [{"nome": "Ana", "nota": 8.5}, {"nome": "Carlos", "nota": 9.2}]
+ordenado = sorted(dados, key=lambda x: x["nota"], reverse=True)
+```
+
+### 6. Tratamento de Exceções
+
+```python
+def dividir(a, b):
+    try:
+        resultado = a / b
+        return resultado
+    except ZeroDivisionError:
+        print("❌ Erro: divisão por zero!")
+        return None
+    except TypeError as e:
+        print(f"❌ Tipo inválido: {e}")
+        return None
+    else:
+        print("✅ Divisão realizada com sucesso")
+    finally:
+        print("🔄 Operação finalizada")
+
+# Criar exceção customizada
+class DadoInvalidoError(Exception):
+    def __init__(self, campo, valor):
+        self.campo = campo
+        self.valor = valor
+        super().__init__(f"Valor inválido '{valor}' para o campo '{campo}'")
+
+def validar_idade(idade):
+    if not isinstance(idade, int) or idade < 0 or idade > 120:
+        raise DadoInvalidoError("idade", idade)
+    return True
+```
+
+---
+
+## 🟡 NÍVEL INTERMEDIÁRIO
+
+### 7. Programação Orientada a Objetos (OOP)
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Optional
+from datetime import datetime
+
+# ── Classe básica ─────────────────────────────────────────
+class Pipeline:
+    """Representa um pipeline de dados."""
+
+    instancias_criadas = 0  # Atributo de classe
+
+    def __init__(self, nome: str, fonte: str, destino: str):
+        self.nome = nome
+        self.fonte = fonte
+        self.destino = destino
+        self.ativo = True
+        self.execucoes: List[dict] = []
+        self._criado_em = datetime.now()  # privado (convenção)
+        Pipeline.instancias_criadas += 1
+
+    # Property (getter/setter elegante)
+    @property
+    def criado_em(self):
+        return self._criado_em.strftime("%d/%m/%Y %H:%M")
+
+    def executar(self) -> dict:
+        if not self.ativo:
+            raise RuntimeError(f"Pipeline '{self.nome}' está inativo!")
+        
+        resultado = {
+            "pipeline": self.nome,
+            "inicio": datetime.now().isoformat(),
+            "status": "sucesso"
+        }
+        self.execucoes.append(resultado)
+        return resultado
+
+    def desativar(self):
+        self.ativo = False
+        print(f"⚠️ Pipeline '{self.nome}' desativado.")
+
+    def __repr__(self):
+        status = "✅ Ativo" if self.ativo else "❌ Inativo"
+        return f"Pipeline(nome='{self.nome}', status={status})"
+
+    def __len__(self):
+        return len(self.execucoes)
+
+
+# ── Herança ───────────────────────────────────────────────
+class PipelineSpark(Pipeline):
+    """Pipeline específico para Apache Spark."""
+
+    def __init__(self, nome, fonte, destino, num_workers: int = 4):
+        super().__init__(nome, fonte, destino)
+        self.num_workers = num_workers
+        self.formato = "parquet"
+
+    def executar(self) -> dict:
+        print(f"⚡ Iniciando Spark com {self.num_workers} workers...")
+        resultado = super().executar()
+        resultado["motor"] = "Apache Spark"
+        resultado["workers"] = self.num_workers
+        return resultado
+
+
+# ── Dataclass (Python 3.7+) ───────────────────────────────
+@dataclass
+class Dataset:
+    nome: str
+    linhas: int
+    colunas: int
+    formato: str = "parquet"
+    tags: List[str] = field(default_factory=list)
+
+    @property
+    def tamanho_estimado_mb(self) -> float:
+        return round((self.linhas * self.colunas * 8) / (1024**2), 2)
+
+    def __post_init__(self):
+        if self.linhas < 0:
+            raise ValueError("Número de linhas não pode ser negativo!")
+
+
+# Uso
+p1 = PipelineSpark("ETL_Vendas", "S3://raw/vendas", "Delta Lake")
+p1.executar()
+print(p1)
+print(f"Execuções: {len(p1)}")
+
+ds = Dataset("Vendas 2024", 1_500_000, 42, tags=["vendas", "br"])
+print(f"Tamanho estimado: {ds.tamanho_estimado_mb} MB")
+```
+
+### 8. Decorators
+
+```python
+import time
+import functools
+from typing import Callable
+
+# ── Decorator de tempo ────────────────────────────────────
+def medir_tempo(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        inicio = time.perf_counter()
+        resultado = func(*args, **kwargs)
+        fim = time.perf_counter()
+        print(f"⏱️ {func.__name__} executou em {fim - inicio:.4f}s")
+        return resultado
+    return wrapper
+
+# ── Decorator de retry ────────────────────────────────────
+def retry(tentativas: int = 3, delay: float = 1.0):
+    def decorador(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            for i in range(tentativas):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if i == tentativas - 1:
+                        raise
+                    print(f"⚠️ Tentativa {i+1}/{tentativas} falhou: {e}")
+                    time.sleep(delay)
+        return wrapper
+    return decorador
+
+# ── Uso ───────────────────────────────────────────────────
+@medir_tempo
+@retry(tentativas=3, delay=0.5)
+def buscar_dados_api(endpoint: str) -> dict:
+    # Simula chamada a API
+    import random
+    if random.random() < 0.3:
+        raise ConnectionError("Timeout na API")
+    return {"status": "ok", "endpoint": endpoint}
+```
+
+### 9. Generators e Iteradores
+
+```python
+from typing import Generator, Iterator
+
+# ── Generator simples ─────────────────────────────────────
+def ler_csv_em_chunks(arquivo: str, chunk_size: int = 1000) -> Generator:
+    """Lê CSV em partes para não sobrecarregar memória."""
+    import csv
+    
+    with open(arquivo, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        chunk = []
+        
+        for i, linha in enumerate(reader):
+            chunk.append(linha)
+            
+            if len(chunk) >= chunk_size:
+                yield chunk
+                chunk = []
+        
+        if chunk:  # Yield do último chunk
+            yield chunk
+
+# ── Generator com send() ──────────────────────────────────
+def acumulador():
+    """Generator que acumula valores enviados via send()."""
+    total = 0
+    while True:
+        valor = yield total
+        if valor is None:
+            break
+        total += valor
+
+# Uso
+acc = acumulador()
+next(acc)
+print(acc.send(10))   # 10
+print(acc.send(25))   # 35
+print(acc.send(5))    # 40
+
+# ── Generator expression (como list comp, mas lazy) ───────
+# List comp — carrega tudo na memória
+quadrados_lista = [x**2 for x in range(1_000_000)]  # 8MB+
+
+# Generator — lazy, processa sob demanda
+quadrados_gen = (x**2 for x in range(1_000_000))    # ~200 bytes
+```
+
+### 10. Context Managers
+
+```python
+from contextlib import contextmanager
+import time
+
+# ── Context Manager como classe ───────────────────────────
+class ConexaoDB:
+    def __init__(self, host: str, porta: int):
+        self.host = host
+        self.porta = porta
+        self.conexao = None
+
+    def __enter__(self):
+        print(f"🔗 Conectando a {self.host}:{self.porta}...")
+        self.conexao = {"host": self.host, "ativa": True}
+        return self.conexao
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print("🔌 Encerrando conexão...")
+        self.conexao["ativa"] = False
+        if exc_type:
+            print(f"❌ Erro durante execução: {exc_val}")
+        return False  # Não suprime exceções
+
+# ── Context Manager como função ───────────────────────────
+@contextmanager
+def monitorar_execucao(nome: str):
+    inicio = time.perf_counter()
+    print(f"▶️  Iniciando: {nome}")
+    try:
+        yield
+    except Exception as e:
+        print(f"❌ Falha em '{nome}': {e}")
+        raise
+    finally:
+        elapsed = time.perf_counter() - inicio
+        print(f"✅ Concluído '{nome}' em {elapsed:.3f}s")
+
+# Uso
+with ConexaoDB("localhost", 27017) as conn:
+    print(f"Conexão ativa: {conn['ativa']}")
+
+with monitorar_execucao("Processamento ETL"):
+    time.sleep(0.1)   # Simula trabalho
+    print("Processando dados...")
+```
+
+---
+
+## 🔴 NÍVEL AVANÇADO
+
+### 11. Programação Assíncrona
+
+```python
+import asyncio
+import aiohttp
+from typing import List
+
+# ── Async/Await básico ────────────────────────────────────
+async def buscar_endpoint(session: aiohttp.ClientSession, url: str) -> dict:
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            data = await resp.json()
+            return {"url": url, "status": resp.status, "dados": data}
+    except Exception as e:
+        return {"url": url, "erro": str(e)}
+
+async def buscar_multiplos(urls: List[str]) -> List[dict]:
+    async with aiohttp.ClientSession() as session:
+        tarefas = [buscar_endpoint(session, url) for url in urls]
+        resultados = await asyncio.gather(*tarefas, return_exceptions=True)
+        return list(resultados)
+
+# ── Producer / Consumer com Queue ─────────────────────────
+async def produtor(fila: asyncio.Queue, itens: List):
+    for item in itens:
+        await fila.put(item)
+        print(f"📥 Produzido: {item}")
+    await fila.put(None)  # Sentinel
+
+async def consumidor(fila: asyncio.Queue):
+    while True:
+        item = await fila.get()
+        if item is None:
+            break
+        await asyncio.sleep(0.05)  # Simula processamento
+        print(f"📤 Consumido: {item}")
+        fila.task_done()
+
+async def pipeline_async():
+    fila = asyncio.Queue(maxsize=5)
+    dados = list(range(10))
+    
+    await asyncio.gather(
+        produtor(fila, dados),
+        consumidor(fila)
+    )
+```
+
+### 12. Otimização de Performance
+
+```python
+import cProfile
+import pstats
+from functools import lru_cache
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+import numpy as np
+
+# ── Cache com LRU ─────────────────────────────────────────
+@lru_cache(maxsize=256)
+def fibonacci(n: int) -> int:
+    if n < 2:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+# Com cache: fibonacci(35) é instantâneo
+# Sem cache: ~4 segundos
+
+# ── Paralelismo com ProcessPoolExecutor ───────────────────
+def processar_chunk(dados: list) -> float:
+    return sum(x**2 for x in dados) / len(dados)
+
+def processar_paralelo(dados_grandes: list, n_workers: int = 4) -> list:
+    chunk_size = len(dados_grandes) // n_workers
+    chunks = [dados_grandes[i:i+chunk_size] 
+              for i in range(0, len(dados_grandes), chunk_size)]
+    
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        resultados = list(executor.map(processar_chunk, chunks))
+    
+    return resultados
+
+# ── Profiling ─────────────────────────────────────────────
+def profile(func):
+    """Decorator para profile de função."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        profiler = cProfile.Profile()
+        profiler.enable()
+        resultado = func(*args, **kwargs)
+        profiler.disable()
+        
+        stats = pstats.Stats(profiler)
+        stats.sort_stats("cumulative")
+        stats.print_stats(10)  # Top 10 funções
+        return resultado
+    return wrapper
+
+# ── NumPy vs Python puro (performance) ────────────────────
+# Python puro
+dados = list(range(1_000_000))
+media_python = sum(dados) / len(dados)  # ~100ms
+
+# NumPy (vetorizado, C por baixo)
+dados_np = np.arange(1_000_000)
+media_numpy = dados_np.mean()           # ~1ms (100x mais rápido)
+```
+
+### 13. Padrões de Projeto para Dados
+
+```python
+from abc import ABC, abstractmethod
+from typing import Any, Dict
+
+# ── Strategy Pattern ──────────────────────────────────────
+class EstrategiaLeitura(ABC):
+    @abstractmethod
+    def ler(self, caminho: str) -> Any:
+        pass
+
+class LeituraCSV(EstrategiaLeitura):
+    def ler(self, caminho: str):
+        import pandas as pd
+        return pd.read_csv(caminho)
+
+class LeituraParquet(EstrategiaLeitura):
+    def ler(self, caminho: str):
+        import pandas as pd
+        return pd.read_parquet(caminho)
+
+class LeituraJSON(EstrategiaLeitura):
+    def ler(self, caminho: str):
+        import pandas as pd
+        return pd.read_json(caminho)
+
+class LeitorDados:
+    def __init__(self, estrategia: EstrategiaLeitura):
+        self._estrategia = estrategia
+
+    def mudar_estrategia(self, estrategia: EstrategiaLeitura):
+        self._estrategia = estrategia
+
+    def carregar(self, caminho: str):
+        return self._estrategia.ler(caminho)
+
+# ── Factory Pattern ───────────────────────────────────────
+class FabricaConexao:
+    _conexoes: Dict[str, type] = {}
+
+    @classmethod
+    def registrar(cls, nome: str, classe):
+        cls._conexoes[nome] = classe
+
+    @classmethod
+    def criar(cls, tipo: str, **kwargs):
+        if tipo not in cls._conexoes:
+            raise ValueError(f"Tipo '{tipo}' não registrado. "
+                           f"Disponíveis: {list(cls._conexoes.keys())}")
+        return cls._conexoes[tipo](**kwargs)
+
+# ── Uso ───────────────────────────────────────────────────
+leitor = LeitorDados(LeituraCSV())
+# leitor.carregar("dados.csv")
+
+leitor.mudar_estrategia(LeituraParquet())
+# leitor.carregar("dados.parquet")
+```
+
+---
+
+## 📚 Recursos Recomendados
+
+| Nível | Recurso | Tipo |
+|-------|---------|------|
+| 🟢 Básico | [Python.org Tutorial](https://docs.python.org/pt-br/3/tutorial/) | Documentação |
+| 🟢 Básico | Automate the Boring Stuff — Al Sweigart | Livro (gratuito online) |
+| 🟡 Intermediário | Fluent Python — Luciano Ramalho | Livro |
+| 🟡 Intermediário | [Real Python](https://realpython.com) | Blog |
+| 🔴 Avançado | Python Cookbook — David Beazley | Livro |
+| 🔴 Avançado | High Performance Python | Livro |
+
+---
+
+## ✅ Checklist de Progresso
+
+### Básico
+- [ ] Tipos de dados e operadores
+- [ ] Listas, tuplas, dicionários, sets
+- [ ] Controle de fluxo (if, for, while)
+- [ ] Funções e escopo
+- [ ] Módulos e pacotes
+- [ ] Tratamento de exceções
+- [ ] Leitura e escrita de arquivos
+
+### Intermediário
+- [ ] OOP completo (herança, polimorfismo, encapsulamento)
+- [ ] Decorators
+- [ ] Generators e iteradores
+- [ ] Context managers
+- [ ] Type hints
+- [ ] Testes com pytest
+
+### Avançado
+- [ ] Programação assíncrona (asyncio)
+- [ ] Metaclasses
+- [ ] Otimização de performance
+- [ ] Paralelismo e concorrência
+- [ ] Design patterns
+- [ ] Packaging e distribuição

@@ -1,0 +1,486 @@
+# 🗄️ SQL — Do Básico ao Avançado
+
+> **Objetivo:** Dominar SQL para análise, engenharia e otimização de dados  
+> **Duração estimada:** 4 a 6 semanas  
+> **Pré-requisito:** Nenhum (SQL é um ótimo ponto de entrada!)
+
+---
+
+## 🟢 NÍVEL BÁSICO
+
+### 1. Fundamentos SELECT
+
+```sql
+-- ── SELECT básico ─────────────────────────────────────────
+SELECT nome, salario, departamento
+FROM funcionarios;
+
+-- Todas as colunas
+SELECT * FROM funcionarios;
+
+-- Com alias
+SELECT 
+    nome            AS funcionario,
+    salario         AS salario_bruto,
+    salario * 0.78  AS salario_liquido
+FROM funcionarios;
+
+-- Valores distintos
+SELECT DISTINCT departamento FROM funcionarios;
+
+-- Limitar resultados
+SELECT nome, salario FROM funcionarios LIMIT 10;
+SELECT TOP 10 nome, salario FROM funcionarios;   -- SQL Server
+
+-- ── WHERE ─────────────────────────────────────────────────
+SELECT * FROM funcionarios
+WHERE salario > 8000;
+
+-- Múltiplos filtros
+SELECT nome, salario, departamento
+FROM funcionarios
+WHERE salario BETWEEN 7000 AND 12000
+  AND departamento IN ('Dados', 'Engenharia')
+  AND ativo = TRUE;
+
+-- Texto
+SELECT * FROM funcionarios
+WHERE nome LIKE 'João%';           -- Começa com João
+WHERE nome LIKE '%Silva';          -- Termina com Silva
+WHERE nome LIKE '%Ana%';           -- Contém Ana
+WHERE email IS NOT NULL;           -- Campo preenchido
+
+-- ── ORDER BY ──────────────────────────────────────────────
+SELECT nome, salario
+FROM funcionarios
+ORDER BY salario DESC,             -- Maior para menor
+         nome ASC;                 -- Alfabético
+```
+
+### 2. Joins
+
+```sql
+-- Tabelas de exemplo:
+-- funcionarios(id, nome, depto_id, salario)
+-- departamentos(id, nome_depto, gerente, orcamento)
+-- projetos(id, nome_proj, depto_id, prazo)
+
+-- ── INNER JOIN (apenas correspondências) ──────────────────
+SELECT 
+    f.nome          AS funcionario,
+    d.nome_depto    AS departamento,
+    f.salario
+FROM funcionarios f
+INNER JOIN departamentos d ON f.depto_id = d.id;
+
+-- ── LEFT JOIN (todos da esquerda + correspondência) ───────
+SELECT 
+    f.nome,
+    d.nome_depto,
+    COALESCE(d.nome_depto, 'Sem Depto') AS depto_tratado
+FROM funcionarios f
+LEFT JOIN departamentos d ON f.depto_id = d.id;
+
+-- ── RIGHT JOIN ─────────────────────────────────────────────
+SELECT f.nome, d.nome_depto
+FROM funcionarios f
+RIGHT JOIN departamentos d ON f.depto_id = d.id;
+
+-- ── FULL OUTER JOIN ───────────────────────────────────────
+SELECT f.nome, d.nome_depto
+FROM funcionarios f
+FULL OUTER JOIN departamentos d ON f.depto_id = d.id;
+
+-- ── JOIN múltiplo ─────────────────────────────────────────
+SELECT 
+    f.nome,
+    d.nome_depto,
+    p.nome_proj,
+    p.prazo
+FROM funcionarios f
+INNER JOIN departamentos d ON f.depto_id = d.id
+LEFT JOIN projetos p       ON p.depto_id = d.id
+WHERE p.prazo >= CURRENT_DATE;
+
+-- ── CROSS JOIN (produto cartesiano) ──────────────────────
+SELECT m.mes, c.categoria
+FROM meses m
+CROSS JOIN categorias c;   -- Gera todas as combinações
+```
+
+### 3. Agregações
+
+```sql
+-- ── Funções de agregação ──────────────────────────────────
+SELECT
+    COUNT(*)                    AS total_registros,
+    COUNT(email)                AS com_email,       -- Ignora NULL
+    COUNT(DISTINCT departamento) AS total_deptos,
+    SUM(salario)                AS folha_total,
+    AVG(salario)                AS salario_medio,
+    MAX(salario)                AS maior_salario,
+    MIN(salario)                AS menor_salario,
+    ROUND(AVG(salario), 2)      AS media_arredondada
+FROM funcionarios
+WHERE ativo = TRUE;
+
+-- ── GROUP BY ──────────────────────────────────────────────
+SELECT 
+    departamento,
+    COUNT(*)        AS headcount,
+    ROUND(AVG(salario), 2) AS salario_medio,
+    SUM(salario)    AS folha
+FROM funcionarios
+WHERE ativo = TRUE
+GROUP BY departamento
+HAVING AVG(salario) > 7000        -- Filtrar DEPOIS da agregação
+ORDER BY salario_medio DESC;
+
+-- ── GROUP BY com ROLLUP ───────────────────────────────────
+SELECT 
+    departamento,
+    cargo,
+    COUNT(*) AS total
+FROM funcionarios
+GROUP BY ROLLUP(departamento, cargo);   -- Subtotais automáticos
+```
+
+---
+
+## 🟡 NÍVEL INTERMEDIÁRIO
+
+### 4. CTEs e Subqueries
+
+```sql
+-- ── CTE (Common Table Expression) ────────────────────────
+WITH 
+-- Primeira CTE
+MediaPorDepto AS (
+    SELECT 
+        departamento,
+        AVG(salario) AS media_depto,
+        COUNT(*)     AS headcount
+    FROM funcionarios
+    WHERE ativo = TRUE
+    GROUP BY departamento
+),
+
+-- Segunda CTE (pode referenciar a anterior)
+TopDepartamentos AS (
+    SELECT *
+    FROM MediaPorDepto
+    WHERE headcount >= 5
+    ORDER BY media_depto DESC
+    LIMIT 3
+)
+
+-- Query final
+SELECT 
+    f.nome,
+    f.salario,
+    md.media_depto,
+    ROUND(f.salario - md.media_depto, 2) AS diferenca_media,
+    CASE 
+        WHEN f.salario > md.media_depto THEN 'Acima da média'
+        ELSE 'Abaixo da média'
+    END AS posicao
+FROM funcionarios f
+INNER JOIN MediaPorDepto md ON f.departamento = md.departamento
+WHERE f.departamento IN (SELECT departamento FROM TopDepartamentos)
+ORDER BY f.departamento, f.salario DESC;
+
+-- ── CTE Recursiva ─────────────────────────────────────────
+WITH RECURSIVE Hierarquia AS (
+    -- Âncora: CEO (sem gerente)
+    SELECT id, nome, gerente_id, 1 AS nivel
+    FROM funcionarios
+    WHERE gerente_id IS NULL
+    
+    UNION ALL
+    
+    -- Recursão: encontrar subordinados
+    SELECT f.id, f.nome, f.gerente_id, h.nivel + 1
+    FROM funcionarios f
+    INNER JOIN Hierarquia h ON f.gerente_id = h.id
+)
+SELECT 
+    REPEAT('  ', nivel - 1) || nome AS hierarquia,
+    nivel
+FROM Hierarquia
+ORDER BY nivel, nome;
+```
+
+### 5. Window Functions
+
+```sql
+-- ── ROW_NUMBER, RANK, DENSE_RANK ──────────────────────────
+SELECT
+    nome,
+    departamento,
+    salario,
+    
+    -- Numeração sequencial única
+    ROW_NUMBER() OVER (PARTITION BY departamento ORDER BY salario DESC) AS row_num,
+    
+    -- Empate → pula posição (1, 2, 2, 4)
+    RANK() OVER (PARTITION BY departamento ORDER BY salario DESC) AS rank_depto,
+    
+    -- Empate → não pula posição (1, 2, 2, 3)
+    DENSE_RANK() OVER (ORDER BY salario DESC) AS dense_rank_geral,
+    
+    -- Percentil (0 a 1)
+    PERCENT_RANK() OVER (ORDER BY salario) AS percentil,
+    
+    -- Bucket (dividir em N grupos)
+    NTILE(4) OVER (ORDER BY salario DESC) AS quartil
+
+FROM funcionarios
+WHERE ativo = TRUE;
+
+-- ── Funções de agregação como window ──────────────────────
+SELECT
+    nome,
+    departamento,
+    salario,
+    
+    -- Agregações sem GROUP BY
+    AVG(salario) OVER (PARTITION BY departamento) AS media_depto,
+    MAX(salario) OVER (PARTITION BY departamento) AS max_depto,
+    SUM(salario) OVER () AS total_folha,               -- Toda a tabela
+    
+    -- Percentual
+    ROUND(salario * 100.0 / SUM(salario) OVER (), 2)  AS pct_folha,
+    
+    -- Acumulado ordenado
+    SUM(salario) OVER (
+        ORDER BY salario DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS salario_acumulado
+
+FROM funcionarios;
+
+-- ── LAG e LEAD (valores anteriores/próximos) ─────────────
+SELECT
+    mes,
+    receita,
+    LAG(receita, 1)  OVER (ORDER BY mes) AS receita_mes_anterior,
+    LEAD(receita, 1) OVER (ORDER BY mes) AS receita_mes_seguinte,
+    
+    receita - LAG(receita) OVER (ORDER BY mes) AS variacao_mom,
+    
+    ROUND(
+        (receita - LAG(receita) OVER (ORDER BY mes)) * 100.0 /
+        NULLIF(LAG(receita) OVER (ORDER BY mes), 0),
+        2
+    ) AS crescimento_pct
+
+FROM vendas_mensais
+ORDER BY mes;
+
+-- ── Top N por grupo ───────────────────────────────────────
+SELECT *
+FROM (
+    SELECT 
+        nome,
+        departamento,
+        salario,
+        ROW_NUMBER() OVER (PARTITION BY departamento ORDER BY salario DESC) AS rn
+    FROM funcionarios
+) ranked
+WHERE rn <= 3;   -- Top 3 por departamento
+```
+
+### 6. CASE WHEN e Expressões Condicionais
+
+```sql
+-- ── CASE simples ──────────────────────────────────────────
+SELECT
+    nome,
+    salario,
+    CASE 
+        WHEN salario < 4000  THEN 'Júnior'
+        WHEN salario < 8000  THEN 'Pleno'
+        WHEN salario < 15000 THEN 'Sênior'
+        ELSE 'Especialista'
+    END AS nivel,
+    
+    -- CASE em agregação (Pivot manual)
+    SUM(CASE WHEN departamento = 'Dados'      THEN salario ELSE 0 END) AS folha_dados,
+    SUM(CASE WHEN departamento = 'Engenharia' THEN salario ELSE 0 END) AS folha_eng,
+    
+    -- COALESCE (primeiro não-nulo)
+    COALESCE(telefone_celular, telefone_fixo, 'Sem contato') AS contato,
+    
+    -- NULLIF (retorna NULL se igual)
+    NULLIF(departamento, 'Não informado') AS depto_limpo
+
+FROM funcionarios;
+```
+
+---
+
+## 🔴 NÍVEL AVANÇADO
+
+### 7. Otimização de Queries
+
+```sql
+-- ── EXPLAIN ANALYZE ───────────────────────────────────────
+-- Ver plano de execução (PostgreSQL)
+EXPLAIN ANALYZE
+SELECT f.nome, d.nome_depto
+FROM funcionarios f
+JOIN departamentos d ON f.depto_id = d.id
+WHERE f.salario > 8000;
+
+/*
+  O que analisar:
+  • Seq Scan    → Leitura sequencial (ruim em tabelas grandes)
+  • Index Scan  → Usa índice (bom!)
+  • Hash Join   → Join com hash (comum e eficiente)
+  • Nested Loop → Join linha a linha (ruim se tabela grande)
+  • Cost        → Estimativa do otimizador
+  • Actual rows → Linhas retornadas de verdade
+  • Actual time → Tempo real em ms
+*/
+
+-- ── Criação de índices ────────────────────────────────────
+-- Índice simples
+CREATE INDEX idx_func_salario ON funcionarios(salario);
+
+-- Índice composto (ordem importa: coluna mais seletiva primeiro)
+CREATE INDEX idx_func_depto_sal ON funcionarios(departamento, salario DESC);
+
+-- Índice parcial (só indexa parte dos dados)
+CREATE INDEX idx_func_ativos ON funcionarios(salario)
+WHERE ativo = TRUE;
+
+-- Índice de cobertura (inclui colunas extras para evitar table scan)
+CREATE INDEX idx_cobertura ON funcionarios(departamento)
+INCLUDE (nome, salario, email);
+
+-- ── Anti-patterns comuns ──────────────────────────────────
+
+-- ❌ Função na coluna filtrada (impede uso de índice)
+WHERE YEAR(data_pedido) = 2024
+
+-- ✅ Usar range
+WHERE data_pedido >= '2024-01-01' AND data_pedido < '2025-01-01'
+
+-- ❌ Wildcard no início (não usa índice de B-tree)
+WHERE nome LIKE '%Silva'
+
+-- ✅ Usar busca textual (Full-Text Search)
+WHERE to_tsvector(nome) @@ to_tsquery('Silva')
+
+-- ❌ SELECT * (transfere dados desnecessários)
+SELECT * FROM tabela_com_200_colunas
+
+-- ✅ Selecionar apenas o necessário
+SELECT id, nome, salario FROM funcionarios
+
+-- ❌ OR em colunas diferentes (dificulta índice)
+WHERE depto_id = 1 OR cargo_id = 5
+
+-- ✅ UNION
+SELECT * FROM func WHERE depto_id = 1
+UNION
+SELECT * FROM func WHERE cargo_id = 5
+
+-- ── Materializar resultados intermediários ────────────────
+-- PostgreSQL
+CREATE MATERIALIZED VIEW mv_resumo_mensal AS
+SELECT 
+    DATE_TRUNC('month', data_pedido) AS mes,
+    departamento,
+    COUNT(*) AS pedidos,
+    SUM(valor) AS receita
+FROM pedidos p
+JOIN funcionarios f ON p.vendedor_id = f.id
+GROUP BY 1, 2;
+
+-- Atualizar (não é automático)
+REFRESH MATERIALIZED VIEW mv_resumo_mensal;
+CREATE UNIQUE INDEX ON mv_resumo_mensal (mes, departamento);
+```
+
+### 8. SQL para Engenharia de Dados (SparkSQL / Hive)
+
+```sql
+-- ── Criação de tabelas Delta ──────────────────────────────
+CREATE TABLE IF NOT EXISTS silver.vendas (
+    venda_id        BIGINT NOT NULL,
+    cliente_id      BIGINT,
+    produto_id      BIGINT,
+    data_venda      DATE,
+    valor_total     DECIMAL(15, 2),
+    quantidade      INT,
+    status          STRING,
+    regiao          STRING,
+    _inserted_at    TIMESTAMP,
+    _updated_at     TIMESTAMP
+)
+USING DELTA
+PARTITIONED BY (regiao, YEAR(data_venda))
+TBLPROPERTIES (
+    'delta.enableChangeDataFeed' = 'true',
+    'delta.autoOptimize.optimizeWrite' = 'true',
+    'quality' = 'silver'
+)
+COMMENT 'Tabela de vendas na camada Silver';
+
+-- ── MERGE (Upsert) em Delta/SparkSQL ─────────────────────
+MERGE INTO silver.vendas AS dest
+USING staging.vendas_novos AS orig
+ON dest.venda_id = orig.venda_id
+
+WHEN MATCHED AND orig.status != dest.status THEN
+    UPDATE SET
+        dest.status     = orig.status,
+        dest._updated_at = current_timestamp()
+
+WHEN NOT MATCHED THEN
+    INSERT (venda_id, cliente_id, valor_total, data_venda, status, _inserted_at)
+    VALUES (orig.venda_id, orig.cliente_id, orig.valor_total, 
+            orig.data_venda, orig.status, current_timestamp())
+
+WHEN NOT MATCHED BY SOURCE AND dest.status = 'pendente' THEN
+    UPDATE SET dest.status = 'cancelado';
+
+-- ── Time Travel em Delta ──────────────────────────────────
+SELECT * FROM silver.vendas VERSION AS OF 5;
+SELECT * FROM silver.vendas TIMESTAMP AS OF '2024-06-01 10:00:00';
+
+-- ── Otimização ────────────────────────────────────────────
+OPTIMIZE silver.vendas ZORDER BY (cliente_id, data_venda);
+VACUUM silver.vendas RETAIN 168 HOURS;   -- Limpar arquivos antigos
+ANALYZE TABLE silver.vendas COMPUTE STATISTICS FOR ALL COLUMNS;
+```
+
+---
+
+## ✅ Checklist de Progresso
+
+### Básico
+- [ ] SELECT, FROM, WHERE
+- [ ] ORDER BY, LIMIT
+- [ ] Todos os tipos de JOIN
+- [ ] GROUP BY, HAVING
+- [ ] Funções de agregação (SUM, COUNT, AVG, MAX, MIN)
+- [ ] CASE WHEN
+
+### Intermediário
+- [ ] CTEs (WITH)
+- [ ] CTEs recursivas
+- [ ] Window Functions (ROW_NUMBER, RANK, LAG, LEAD)
+- [ ] Subqueries correlacionadas
+- [ ] Funções de data e string
+- [ ] Tratamento de NULLs
+
+### Avançado
+- [ ] EXPLAIN e análise de plano de execução
+- [ ] Criação e gerenciamento de índices
+- [ ] Views e Materialized Views
+- [ ] Particionamento de tabelas
+- [ ] SQL para Data Engineering (MERGE, Delta)
+- [ ] Stored Procedures e funções customizadas
+- [ ] Otimização e anti-patterns

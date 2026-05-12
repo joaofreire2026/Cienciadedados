@@ -1,0 +1,620 @@
+# 🍃 MongoDB — Do Básico ao Avançado
+
+> **Objetivo:** Dominar o banco de dados NoSQL mais utilizado no mercado  
+> **Duração estimada:** 4 a 6 semanas  
+> **Pré-requisito:** Lógica de programação, SQL básico (desejável)
+
+---
+
+## 🗺️ Roadmap
+
+```
+SEMANA 1          SEMANA 2-3          SEMANA 4          SEMANA 5-6
+─────────         ──────────          ─────────         ──────────
+NoSQL vs SQL      Aggregation         Índices           Replica Sets
+Documentos        Pipeline            Explain Plan      Sharding
+Coleções          $lookup (Join)      Transactions      Change Streams
+CRUD              Expressões          Schema Design      Atlas Search
+Filtros           Arrays              Validação         Integração Python
+```
+
+---
+
+## 🟢 NÍVEL BÁSICO
+
+### 1. Conceitos Fundamentais
+
+```
+MONGODB vs SQL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  SQL (Relacional)        MongoDB (Documento)
+  ────────────────        ───────────────────
+  Banco de Dados     ←→   Database
+  Tabela             ←→   Collection (Coleção)
+  Linha / Registro   ←→   Document (Documento JSON)
+  Coluna             ←→   Field (Campo)
+  JOIN               ←→   $lookup / Embedding
+  Primary Key        ←→   _id (ObjectId)
+  Schema rígido      ←→   Schema flexível
+
+DOCUMENTO EXEMPLO:
+{
+  "_id": ObjectId("65abc123def456789"),
+  "nome": "João Silva",
+  "email": "joao@empresa.com",
+  "cargo": "Data Engineer",
+  "habilidades": ["Python", "Spark", "MongoDB"],
+  "endereco": {
+    "cidade": "Recife",
+    "estado": "PE",
+    "cep": "50000-000"
+  },
+  "salario": 9500.00,
+  "ativo": true,
+  "criado_em": ISODate("2024-01-15T10:30:00Z")
+}
+```
+
+### 2. CRUD — Operações Básicas
+
+```javascript
+// ══════════════════════════════════════
+// MONGOSH — Shell Interativo
+// Conectar: mongosh "mongodb://localhost:27017"
+// ══════════════════════════════════════
+
+use empresa_db   // Criar/selecionar banco
+
+// ── CREATE (Inserir) ──────────────────────────────────────
+
+// Inserir um documento
+db.funcionarios.insertOne({
+    nome: "Ana Lima",
+    email: "ana.lima@empresa.com",
+    departamento: "Dados",
+    salario: 8500,
+    habilidades: ["Python", "SQL", "Power BI"],
+    endereco: { cidade: "São Paulo", estado: "SP" },
+    ativo: true,
+    contratado_em: new Date("2023-03-01")
+})
+
+// Inserir múltiplos documentos
+db.funcionarios.insertMany([
+    { nome: "Bruno Costa",  departamento: "TI",   salario: 7200, ativo: true },
+    { nome: "Carla Santos", departamento: "Dados", salario: 9100, ativo: true },
+    { nome: "Diego Alves",  departamento: "TI",   salario: 6800, ativo: false }
+])
+
+// ── READ (Buscar) ─────────────────────────────────────────
+
+// Buscar todos
+db.funcionarios.find()
+db.funcionarios.find().pretty()
+
+// Buscar com filtro
+db.funcionarios.find({ departamento: "Dados" })
+db.funcionarios.find({ ativo: true, salario: { $gt: 8000 } })
+
+// Buscar um
+db.funcionarios.findOne({ email: "ana.lima@empresa.com" })
+
+// Projeção (campos específicos)
+db.funcionarios.find(
+    { ativo: true },
+    { nome: 1, salario: 1, departamento: 1, _id: 0 }
+)
+
+// Ordenação, limite e skip
+db.funcionarios.find({ ativo: true })
+    .sort({ salario: -1 })   // -1 = decrescente
+    .limit(5)
+    .skip(10)                // Paginação
+
+// ── UPDATE (Atualizar) ────────────────────────────────────
+
+// Atualizar um documento
+db.funcionarios.updateOne(
+    { email: "ana.lima@empresa.com" },
+    {
+        $set: { salario: 9000, "endereco.bairro": "Vila Olímpia" },
+        $currentDate: { atualizado_em: true }
+    }
+)
+
+// Atualizar múltiplos
+db.funcionarios.updateMany(
+    { departamento: "TI" },
+    { $inc: { salario: 500 } }   // Incrementar salário em 500
+)
+
+// Operadores de update
+db.funcionarios.updateOne(
+    { nome: "Ana Lima" },
+    {
+        $push: { habilidades: "Databricks" },  // Adicionar ao array
+        $set: { nivel: "Sênior" }
+    }
+)
+
+// Upsert (insert se não existir)
+db.funcionarios.updateOne(
+    { email: "novo@empresa.com" },
+    { $set: { nome: "Novo Funcionário", ativo: true } },
+    { upsert: true }
+)
+
+// ── DELETE (Remover) ──────────────────────────────────────
+
+// Remover um
+db.funcionarios.deleteOne({ email: "ana.lima@empresa.com" })
+
+// Remover múltiplos
+db.funcionarios.deleteMany({ ativo: false })
+
+// ── Operadores de Comparação ──────────────────────────────
+/*
+  $eq   → igual
+  $ne   → diferente
+  $gt   → maior que
+  $gte  → maior ou igual
+  $lt   → menor que
+  $lte  → menor ou igual
+  $in   → dentro de uma lista
+  $nin  → fora de uma lista
+  $exists → campo existe
+*/
+
+db.funcionarios.find({
+    salario: { $gte: 7000, $lte: 12000 },
+    departamento: { $in: ["Dados", "Engenharia"] },
+    email: { $exists: true }
+})
+```
+
+---
+
+## 🟡 NÍVEL INTERMEDIÁRIO
+
+### 3. Aggregation Pipeline
+
+```javascript
+// ══════════════════════════════════════════════════════
+// PIPELINE = série de estágios que transformam documentos
+// ══════════════════════════════════════════════════════
+
+// ── Exemplo completo ──────────────────────────────────────
+db.funcionarios.aggregate([
+    // Estágio 1: Filtrar
+    { $match: { ativo: true, salario: { $gt: 5000 } } },
+    
+    // Estágio 2: Adicionar campo calculado
+    { $addFields: {
+        salario_liquido: { $multiply: ["$salario", 0.78] },
+        senioridade: {
+            $switch: {
+                branches: [
+                    { case: { $lt: ["$salario", 5000] }, then: "Júnior" },
+                    { case: { $lt: ["$salario", 9000] }, then: "Pleno" }
+                ],
+                default: "Sênior"
+            }
+        }
+    }},
+    
+    // Estágio 3: Agrupar
+    { $group: {
+        _id: "$departamento",
+        total_funcionarios: { $sum: 1 },
+        salario_medio:      { $avg: "$salario" },
+        maior_salario:      { $max: "$salario" },
+        menor_salario:      { $min: "$salario" },
+        folha_total:        { $sum: "$salario" },
+        habilidades_todas:  { $addToSet: "$habilidades" }
+    }},
+    
+    // Estágio 4: Projetar
+    { $project: {
+        departamento: "$_id",
+        _id: 0,
+        total_funcionarios: 1,
+        salario_medio: { $round: ["$salario_medio", 2] },
+        maior_salario: 1,
+        menor_salario: 1,
+        folha_total: 1
+    }},
+    
+    // Estágio 5: Ordenar
+    { $sort: { salario_medio: -1 } },
+    
+    // Estágio 6: Limitar
+    { $limit: 5 }
+])
+
+// ── $lookup (JOIN) ────────────────────────────────────────
+db.pedidos.aggregate([
+    { $match: { status: "entregue" } },
+    
+    { $lookup: {
+        from: "clientes",
+        localField: "cliente_id",
+        foreignField: "_id",
+        as: "cliente_info"
+    }},
+    
+    { $unwind: "$cliente_info" },   // Array → objeto
+    
+    { $project: {
+        numero_pedido: 1,
+        valor_total: 1,
+        "cliente_info.nome": 1,
+        "cliente_info.email": 1,
+        "cliente_info.cidade": 1
+    }}
+])
+
+// ── $lookup com pipeline (avançado) ──────────────────────
+db.funcionarios.aggregate([
+    { $lookup: {
+        from: "projetos",
+        let: { func_id: "$_id", depto: "$departamento" },
+        pipeline: [
+            { $match: {
+                $expr: {
+                    $and: [
+                        { $in: ["$$func_id", "$membros"] },
+                        { $eq: ["$ativo", true] }
+                    ]
+                }
+            }},
+            { $project: { nome: 1, prazo: 1, _id: 0 } }
+        ],
+        as: "projetos_ativos"
+    }}
+])
+
+// ── Operações com Arrays ──────────────────────────────────
+// $unwind — Desagrupar array
+db.funcionarios.aggregate([
+    { $unwind: "$habilidades" },
+    { $group: {
+        _id: "$habilidades",
+        total: { $sum: 1 }
+    }},
+    { $sort: { total: -1 } }
+])
+
+// Filtrar dentro de array
+db.funcionarios.find({
+    habilidades: { $all: ["Python", "Spark"] }  // Tem TODOS
+})
+db.funcionarios.find({
+    habilidades: { $elemMatch: { $eq: "MongoDB" } }  // Tem PELO MENOS UM
+})
+```
+
+### 4. Índices
+
+```javascript
+// ── Por que usar índices? ──────────────────────────────────
+/*
+  SEM ÍNDICE: Collection Scan (lê TODOS os documentos)
+  COM ÍNDICE: Index Scan (lê apenas o necessário)
+  
+  Analogia: Índice de livro vs. ler o livro inteiro
+*/
+
+// ── Criar índices ─────────────────────────────────────────
+// Índice simples
+db.funcionarios.createIndex({ email: 1 })          // 1 = ascendente
+db.funcionarios.createIndex({ salario: -1 })        // -1 = descendente
+
+// Índice único
+db.funcionarios.createIndex({ email: 1 }, { unique: true })
+
+// Índice composto (ordem importa!)
+db.funcionarios.createIndex({ departamento: 1, salario: -1 })
+
+// Índice com TTL (auto-delete)
+db.sessoes.createIndex(
+    { criado_em: 1 },
+    { expireAfterSeconds: 3600 }   // Expira em 1 hora
+)
+
+// Índice de texto (busca textual)
+db.artigos.createIndex({ titulo: "text", conteudo: "text" })
+db.artigos.find({ $text: { $search: "machine learning dados" } })
+
+// Índice parcial (só indexa documentos que atendem filtro)
+db.funcionarios.createIndex(
+    { salario: 1 },
+    { partialFilterExpression: { ativo: true } }
+)
+
+// ── Analisar performance ──────────────────────────────────
+db.funcionarios.find({ email: "joao@empresa.com" }).explain("executionStats")
+
+// Listar e remover índices
+db.funcionarios.getIndexes()
+db.funcionarios.dropIndex("email_1")
+```
+
+### 5. Transactions (ACID)
+
+```javascript
+// ── Transação multi-documento ─────────────────────────────
+const session = db.getMongo().startSession()
+session.startTransaction({
+    readConcern: { level: "majority" },
+    writeConcern: { w: "majority" }
+})
+
+try {
+    const dbOp = session.getDatabase("banco")
+    
+    // Débito
+    dbOp.contas.updateOne(
+        { _id: "conta_origem", saldo: { $gte: 1000 } },
+        { $inc: { saldo: -1000 } },
+        { session }
+    )
+    
+    // Crédito
+    dbOp.contas.updateOne(
+        { _id: "conta_destino" },
+        { $inc: { saldo: 1000 } },
+        { session }
+    )
+    
+    // Registrar log
+    dbOp.transferencias.insertOne({
+        origem: "conta_origem",
+        destino: "conta_destino",
+        valor: 1000,
+        timestamp: new Date()
+    }, { session })
+    
+    session.commitTransaction()
+    print("✅ Transferência concluída!")
+    
+} catch (erro) {
+    session.abortTransaction()
+    print("❌ Transação cancelada:", erro)
+} finally {
+    session.endSession()
+}
+```
+
+---
+
+## 🔴 NÍVEL AVANÇADO
+
+### 6. Schema Design Patterns
+
+```javascript
+// ══════════════════════════════════════════════════════
+// PADRÃO 1: EMBEDDING (Dados no mesmo documento)
+// Use quando: dados são lidos juntos, não mudam muito
+// ══════════════════════════════════════════════════════
+
+{
+    "_id": ObjectId("..."),
+    "numero": "PED-2024-001",
+    "cliente": {
+        "nome": "Empresa Alpha",
+        "cnpj": "12.345.678/0001-90",
+        "email": "compras@alpha.com"
+    },
+    "itens": [
+        { "produto": "Laptop Dell", "qty": 2, "preco_unit": 4500.00 },
+        { "produto": "Mouse Logitech", "qty": 2, "preco_unit": 150.00 }
+    ],
+    "total": 9300.00,
+    "status": "entregue",
+    "criado_em": ISODate("2024-01-15")
+}
+
+// ══════════════════════════════════════════════════════
+// PADRÃO 2: REFERÊNCIA (Relacionamento por _id)
+// Use quando: dados mudam independentemente, 1:N grande
+// ══════════════════════════════════════════════════════
+
+// Coleção: funcionarios
+{ "_id": ObjectId("abc"), "nome": "João", "depto_id": ObjectId("xyz") }
+
+// Coleção: departamentos
+{ "_id": ObjectId("xyz"), "nome": "Dados", "gerente": "Maria" }
+
+// ══════════════════════════════════════════════════════
+// PADRÃO 3: BUCKET (Agrupar séries temporais)
+// Use quando: dados de IoT, métricas, logs por hora/dia
+// ══════════════════════════════════════════════════════
+
+{
+    "_id": { "sensor": "temp_01", "hora": ISODate("2024-01-15T14:00:00Z") },
+    "sensor_id": "temp_01",
+    "periodo": "2024-01-15T14",
+    "leituras": [
+        { "ts": ISODate("2024-01-15T14:00:00Z"), "valor": 23.5 },
+        { "ts": ISODate("2024-01-15T14:01:00Z"), "valor": 23.7 },
+        // ... até 60 leituras por hora
+    ],
+    "stats": {
+        "count": 60,
+        "min": 22.1,
+        "max": 25.3,
+        "avg": 23.8
+    }
+}
+```
+
+### 7. Python com PyMongo
+
+```python
+from pymongo import MongoClient, ASCENDING, DESCENDING
+from pymongo.errors import DuplicateKeyError, BulkWriteError
+from bson import ObjectId
+from datetime import datetime, timedelta
+from typing import List, Optional, Dict, Any
+import logging
+
+# ── Conexão ───────────────────────────────────────────────
+class MongoDBClient:
+    def __init__(self, uri: str, banco: str):
+        self.client = MongoClient(
+            uri,
+            serverSelectionTimeoutMS=5000,
+            maxPoolSize=50,
+            retryWrites=True,
+            w="majority"
+        )
+        self.db = self.client[banco]
+        self._testar_conexao()
+    
+    def _testar_conexao(self):
+        self.client.admin.command("ping")
+        print(f"✅ Conectado ao MongoDB: {self.client.HOST}")
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *args):
+        self.client.close()
+        print("🔌 Conexão encerrada.")
+
+# ── Repositório de funcionários ───────────────────────────
+class FuncionarioRepository:
+    def __init__(self, db):
+        self.col = db["funcionarios"]
+        self._criar_indices()
+    
+    def _criar_indices(self):
+        self.col.create_index([("email", ASCENDING)], unique=True)
+        self.col.create_index([("departamento", ASCENDING), ("salario", DESCENDING)])
+        self.col.create_index([("nome", "text")])
+    
+    def criar(self, dados: Dict) -> str:
+        dados["criado_em"] = datetime.utcnow()
+        dados["atualizado_em"] = datetime.utcnow()
+        try:
+            resultado = self.col.insert_one(dados)
+            return str(resultado.inserted_id)
+        except DuplicateKeyError:
+            raise ValueError(f"E-mail '{dados.get('email')}' já cadastrado!")
+    
+    def buscar_por_id(self, id: str) -> Optional[Dict]:
+        return self.col.find_one({"_id": ObjectId(id)})
+    
+    def buscar_com_filtros(
+        self,
+        departamento: Optional[str] = None,
+        salario_min: Optional[float] = None,
+        salario_max: Optional[float] = None,
+        habilidades: Optional[List[str]] = None,
+        pagina: int = 1,
+        por_pagina: int = 20
+    ) -> Dict:
+        filtro = {"ativo": True}
+        
+        if departamento:
+            filtro["departamento"] = departamento
+        
+        if salario_min or salario_max:
+            filtro["salario"] = {}
+            if salario_min: filtro["salario"]["$gte"] = salario_min
+            if salario_max: filtro["salario"]["$lte"] = salario_max
+        
+        if habilidades:
+            filtro["habilidades"] = {"$all": habilidades}
+        
+        skip = (pagina - 1) * por_pagina
+        total = self.col.count_documents(filtro)
+        docs  = list(self.col.find(filtro).skip(skip).limit(por_pagina))
+        
+        # Converter ObjectId para string
+        for doc in docs:
+            doc["_id"] = str(doc["_id"])
+        
+        return {
+            "dados": docs,
+            "total": total,
+            "pagina": pagina,
+            "por_pagina": por_pagina,
+            "paginas": (total + por_pagina - 1) // por_pagina
+        }
+    
+    def atualizar(self, id: str, dados: Dict) -> bool:
+        dados["atualizado_em"] = datetime.utcnow()
+        resultado = self.col.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": dados}
+        )
+        return resultado.modified_count > 0
+    
+    def executar_aggregation(self, pipeline: List[Dict]) -> List[Dict]:
+        return list(self.col.aggregate(pipeline))
+
+# ── Uso ───────────────────────────────────────────────────
+with MongoDBClient("mongodb://localhost:27017", "empresa") as mongo:
+    repo = FuncionarioRepository(mongo.db)
+    
+    # Criar
+    id_novo = repo.criar({
+        "nome": "João Silva",
+        "email": "joao@empresa.com",
+        "departamento": "Dados",
+        "salario": 9500,
+        "habilidades": ["Python", "Spark", "MongoDB"],
+        "ativo": True
+    })
+    
+    # Buscar com paginação
+    resultado = repo.buscar_com_filtros(
+        departamento="Dados",
+        salario_min=7000,
+        habilidades=["Python"],
+        pagina=1,
+        por_pagina=10
+    )
+    print(f"Total: {resultado['total']} | Página {resultado['pagina']}")
+    
+    # Aggregation
+    kpis = repo.executar_aggregation([
+        {"$match": {"ativo": True}},
+        {"$group": {
+            "_id": "$departamento",
+            "total": {"$sum": 1},
+            "salario_medio": {"$avg": "$salario"}
+        }},
+        {"$sort": {"salario_medio": -1}}
+    ])
+```
+
+---
+
+## ✅ Checklist de Progresso
+
+### Básico
+- [ ] Documentos, coleções e bancos
+- [ ] CRUD completo (insertOne, find, updateOne, deleteOne)
+- [ ] Operadores de comparação e lógicos
+- [ ] Projeção e ordenação
+- [ ] Paginação (skip + limit)
+
+### Intermediário
+- [ ] Aggregation Pipeline completo
+- [ ] $lookup (JOIN entre coleções)
+- [ ] Operações com arrays ($push, $pull, $unwind)
+- [ ] Índices (simples, composto, texto, TTL)
+- [ ] Explain e análise de performance
+- [ ] Transactions ACID
+
+### Avançado
+- [ ] Schema Design Patterns (Embedding vs Reference)
+- [ ] Bucket Pattern para séries temporais
+- [ ] Change Streams (reatividade)
+- [ ] Replica Sets e alta disponibilidade
+- [ ] Sharding para escalabilidade horizontal
+- [ ] MongoDB Atlas Search
+- [ ] Integração Python (PyMongo avançado)

@@ -1,0 +1,537 @@
+# 📊 Power BI — Do Básico ao Avançado
+
+> **Objetivo:** Criar dashboards profissionais e análises de dados com Power BI  
+> **Duração estimada:** 5 a 8 semanas  
+> **Pré-requisito:** Excel básico, lógica de programação (desejável)
+
+---
+
+## 🗺️ Roadmap
+
+```
+SEMANA 1-2         SEMANA 3-4          SEMANA 5-6          SEMANA 7-8
+──────────         ──────────          ──────────          ──────────
+Interface PBI      DAX Básico          DAX Avançado        RLS (Segurança)
+Conexões           Medidas             Time Intelligence   Dataflows
+Power Query        Relacionamentos     Funções X           API REST
+Visuais Nativos    Modelo Estrela      CALCULATE fundo     Publicação/CI
+Filtros/Slicers    Formatação Avançada Decomposition Tree  Incremental Refresh
+```
+
+---
+
+## 🟢 NÍVEL BÁSICO
+
+### 1. Interface e Navegação
+
+```
+POWER BI DESKTOP — VISÃO GERAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MODOS DE VISUALIZAÇÃO (Painel lateral esquerdo):
+  📊 Report View    → Criar e editar dashboards
+  📋 Table View     → Ver dados das tabelas
+  🔗 Model View     → Gerenciar relacionamentos
+
+PAINEL DIREITO:
+  Filters   → Filtros de visual, página e relatório
+  Visualiz. → Galeria de visuais e configuração
+  Data      → Campos disponíveis nas tabelas
+
+RIBBON (FAIXA DE OPÇÕES):
+  Home         → Fontes de dados, transformar, publicar
+  Insert       → Visuais, botões, elementos
+  Modeling     → Colunas calculadas, medidas, relações
+  View         → Layout, temas, performance analyzer
+  Help         → Comunidade, documentação
+
+FLUXO DE TRABALHO:
+  1. Conectar (Get Data)
+  2. Transformar (Power Query)
+  3. Modelar (Relacionamentos + DAX)
+  4. Visualizar (Construir relatório)
+  5. Publicar (Power BI Service)
+```
+
+### 2. Power Query — Transformação de Dados
+
+```
+POWER QUERY = ETL Visual do Power BI
+(Cada passo é registrado e reproduzível)
+
+PASSOS ESSENCIAIS:
+```
+
+```m
+// ── Exemplos de M (linguagem do Power Query) ──────────────
+
+// Remover linhas em branco e duplicatas
+let
+    Fonte = Excel.Workbook(File.Contents("vendas.xlsx"), true),
+    Tabela = Fonte{[Name="Vendas"]}[Data],
+    TipoAlterado = Table.TransformColumnTypes(Tabela, {
+        {"Data", type date},
+        {"Valor", type number},
+        {"Categoria", type text}
+    }),
+    SemNulos = Table.SelectRows(TipoAlterado, each [Valor] <> null),
+    SemDuplicatas = Table.Distinct(SemNulos, {"ID_Pedido"})
+in
+    SemDuplicatas
+
+// ── Coluna condicional ────────────────────────────────────
+= Table.AddColumn(Tabela, "Faixa", each 
+    if [Valor] < 100 then "Baixo"
+    else if [Valor] < 500 then "Médio"
+    else "Alto"
+)
+
+// ── Extrair partes de data ─────────────────────────────────
+= Table.AddColumn(Tabela, "Ano",  each Date.Year([Data]))
+= Table.AddColumn(Tabela, "Mes",  each Date.Month([Data]))
+= Table.AddColumn(Tabela, "Trim", each Date.QuarterOfYear([Data]))
+
+// ── Mesclar tabelas (equivale a JOIN) ─────────────────────
+= Table.NestedJoin(
+    Vendas, {"ClienteID"},
+    Clientes, {"ID"},
+    "DadosCliente", JoinKind.LeftOuter
+)
+```
+
+### 3. Modelagem — Relacionamentos
+
+```
+MODELO ESTRELA (Star Schema) — PADRÃO RECOMENDADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                    DIM_TEMPO
+                    ├── DataKey (PK)
+                    ├── Data
+                    ├── Ano
+                    ├── Trimestre
+                    └── Mes
+
+DIM_PRODUTO         FATO_VENDAS           DIM_CLIENTE
+├── ProdutoID (PK)  ├── VendaID (PK)      ├── ClienteID (PK)
+├── Nome      ──────├── ProdutoID (FK)    ├── Nome
+├── Categoria       ├── ClienteID (FK)────┘  ├── Segmento
+└── Preco           ├── DataKey (FK)──────   └── Regiao
+                    ├── Valor
+                    └── Quantidade
+
+REGRAS DO MODELO ESTRELA:
+  ✅ Dimensões → SEMPRE do lado "1" (um)
+  ✅ Fato      → SEMPRE do lado "muitos"
+  ✅ Usar chaves simples (integers)
+  ✅ Tabela de datas SEMPRE necessária
+  ❌ Evitar relacionamentos bidirecionais
+  ❌ Evitar tabelas "floco de neve" desnecessárias
+```
+
+### 4. Visuais Nativos Essenciais
+
+```
+QUANDO USAR CADA VISUAL:
+
+  Cartão (Card)           → KPI único: "R$ 1,2M"
+  KPI                     → Valor + meta + tendência
+  Tabela                  → Dados detalhados, múltiplas colunas
+  Matriz                  → Pivot com hierarquias
+  Gráfico de Barras       → Comparar categorias
+  Gráfico de Colunas      → Mesma coisa, orientação vertical
+  Gráfico de Linhas       → Tendência ao longo do tempo
+  Gráfico de Área         → Como linha, mas com volume
+  Pizza / Rosca           → Proporção (máx 5 fatias!)
+  Dispersão               → Correlação entre 2 medidas
+  Mapa                    → Dados geográficos
+  Funil                   → Processo com etapas/conversão
+  Treemap                 → Hierarquia + proporção
+  Gauge (Velocímetro)     → % de meta atingida
+  Segmentação (Slicer)    → Filtro visual interativo
+
+BOAS PRÁTICAS DE DESIGN:
+  • Uma mensagem por visual
+  • Título descritivo (não "Gráfico de Barras")
+  • Cores: significado > estética
+  • Menos é mais — evite poluição visual
+  • Fonte mínima: 10pt
+  • Consistência de cores entre visuais relacionados
+```
+
+---
+
+## 🟡 NÍVEL INTERMEDIÁRIO
+
+### 5. DAX — Fundamentos
+
+```dax
+// ══════════════════════════════════════════════════════
+// DAX = Data Analysis Expressions
+// ══════════════════════════════════════════════════════
+
+// ── Medidas Básicas ───────────────────────────────────────
+
+// Receita Total
+Receita Total = SUM(fFato_Vendas[Valor])
+
+// Quantidade de Pedidos
+Total Pedidos = COUNTROWS(fFato_Vendas)
+
+// Ticket Médio
+Ticket Médio = DIVIDE([Receita Total], [Total Pedidos], 0)
+
+// Clientes Únicos
+Clientes Únicos = DISTINCTCOUNT(fFato_Vendas[ClienteID])
+
+// ── Medidas com Filtro (CALCULATE) ───────────────────────
+// CALCULATE = a função mais importante do DAX
+// Avalia uma expressão em um contexto de filtro modificado
+
+// Receita apenas de SP
+Receita SP = 
+CALCULATE(
+    [Receita Total],
+    dDim_Cliente[Estado] = "SP"
+)
+
+// Receita do ano atual
+Receita Ano Atual = 
+CALCULATE(
+    [Receita Total],
+    YEAR(dDim_Tempo[Data]) = YEAR(TODAY())
+)
+
+// Receita sem o filtro de categoria (ALL)
+Receita Total Geral = 
+CALCULATE(
+    [Receita Total],
+    ALL(dDim_Produto[Categoria])
+)
+
+// % da Receita sobre o Total
+% Participação = 
+DIVIDE(
+    [Receita Total],
+    CALCULATE([Receita Total], ALL(dDim_Produto)),
+    0
+)
+
+// ── Funções de Iteração (X Functions) ────────────────────
+// SUMX, AVERAGEX, MAXX, MINX, COUNTAX, RANKX
+
+// Margem Total (precisa calcular por linha, depois somar)
+Margem Total = 
+SUMX(
+    fFato_Vendas,
+    fFato_Vendas[Quantidade] * 
+    (dDim_Produto[PrecoVenda] - dDim_Produto[PrecoCusto])
+)
+
+// Produto mais vendido (por receita)
+Top Produto = 
+MAXX(
+    TOPN(1, dDim_Produto, [Receita Total]),
+    dDim_Produto[NomeProduto]
+)
+```
+
+### 6. DAX — Time Intelligence
+
+```dax
+// ⚠️ REQUISITO: Tabela de datas contínua marcada como "Data Table"
+
+// ── Comparações temporais ─────────────────────────────────
+
+// Mês Anterior
+Receita Mês Anterior = 
+CALCULATE(
+    [Receita Total],
+    PREVIOUSMONTH(dDim_Tempo[Data])
+)
+
+// Crescimento MoM (Month over Month)
+Crescimento MoM = 
+VAR ReceitaAtual  = [Receita Total]
+VAR ReceitaAnterior = [Receita Mês Anterior]
+RETURN
+    DIVIDE(ReceitaAtual - ReceitaAnterior, ReceitaAnterior, 0)
+
+// Crescimento MoM % formatado
+Crescimento MoM % = 
+FORMAT([Crescimento MoM], "+0.0%;-0.0%;0.0%")
+
+// Ano Anterior (Same Period Last Year)
+Receita SPLY = 
+CALCULATE(
+    [Receita Total],
+    SAMEPERIODLASTYEAR(dDim_Tempo[Data])
+)
+
+// YTD — Acumulado no Ano
+Receita YTD = 
+TOTALYTD(
+    [Receita Total],
+    dDim_Tempo[Data]
+    // "12/31" para anos fiscais diferentes
+)
+
+// MTD — Acumulado no Mês
+Receita MTD = 
+TOTALMTD([Receita Total], dDim_Tempo[Data])
+
+// Últimos 12 Meses
+Receita L12M = 
+CALCULATE(
+    [Receita Total],
+    DATESINPERIOD(
+        dDim_Tempo[Data],
+        LASTDATE(dDim_Tempo[Data]),
+        -12, MONTH
+    )
+)
+
+// ── Tabela de Datas Recomendada ───────────────────────────
+dDim_Tempo = 
+VAR DataInicio = DATE(2020, 1, 1)
+VAR DataFim    = DATE(2030, 12, 31)
+VAR TabelaDatas = 
+    ADDCOLUMNS(
+        CALENDAR(DataInicio, DataFim),
+        "Ano",          YEAR([Date]),
+        "Trimestre",    QUARTER([Date]),
+        "Mês Num",      MONTH([Date]),
+        "Mês Nome",     FORMAT([Date], "MMMM"),
+        "Mês Abrev",    FORMAT([Date], "MMM"),
+        "Semana",       WEEKNUM([Date]),
+        "Dia Semana",   WEEKDAY([Date]),
+        "Dia Nome",     FORMAT([Date], "dddd"),
+        "Ano-Mês",      FORMAT([Date], "YYYY-MM"),
+        "Trimestre Nome", "T" & QUARTER([Date]) & "/" & YEAR([Date]),
+        "É Final Semana", IF(WEEKDAY([Date], 2) > 5, TRUE, FALSE)
+    )
+RETURN TabelaDatas
+```
+
+### 7. CALCULATE — Aprofundamento
+
+```dax
+// ── FILTER dentro de CALCULATE ────────────────────────────
+// Atenção: FILTER itera linha a linha (pode ser lento em tabelas grandes)
+
+Receita Grandes Clientes = 
+CALCULATE(
+    [Receita Total],
+    FILTER(
+        dDim_Cliente,
+        dDim_Cliente[Segmento] = "Enterprise" &&
+        dDim_Cliente[AnoCliente] >= 2022
+    )
+)
+
+// ── KEEPFILTERS (não substitui, adiciona filtros) ─────────
+Receita SP Mantendo Filtro = 
+CALCULATE(
+    [Receita Total],
+    KEEPFILTERS(dDim_Cliente[Estado] = "SP")
+)
+
+// ── ALLSELECTED (respeita filtros externos) ───────────────
+% Sobre Selecionado = 
+DIVIDE(
+    [Receita Total],
+    CALCULATE([Receita Total], ALLSELECTED(dDim_Produto[Categoria]))
+)
+
+// ── VAR / RETURN (organização e performance) ─────────────
+Meta Atingida = 
+VAR ReceitaAtual   = [Receita Total]
+VAR Meta           = [Meta Periodo]
+VAR Atingimento    = DIVIDE(ReceitaAtual, Meta, 0)
+VAR CorSemaforo    = 
+    IF(Atingimento >= 1, "✅", 
+    IF(Atingimento >= 0.8, "⚠️", "❌"))
+RETURN
+    CorSemaforo & " " & FORMAT(Atingimento, "0.0%")
+
+// ── SWITCH (if/elseif/else elegante) ─────────────────────
+Categoria Receita = 
+SWITCH(
+    TRUE(),
+    [Receita Total] >= 1000000, "Platina",
+    [Receita Total] >= 500000,  "Ouro",
+    [Receita Total] >= 100000,  "Prata",
+    "Bronze"
+)
+```
+
+---
+
+## 🔴 NÍVEL AVANÇADO
+
+### 8. Row-Level Security (RLS)
+
+```dax
+// ── RLS Estático ──────────────────────────────────────────
+// Em: Modeling → Manage Roles → New Role
+
+// Regra para "Vendas_SP"
+[Estado] = "SP"
+
+// Regra para "Vendas_Sul"
+[Estado] IN {"PR", "SC", "RS"}
+
+// ── RLS Dinâmico (via tabela de permissões) ───────────────
+// Tabela: dPermissoes
+// Colunas: Email, Estado, Categoria
+
+// Filtro na dimensão Cliente:
+dDim_Cliente[Estado] = 
+LOOKUPVALUE(
+    dPermissoes[Estado],
+    dPermissoes[Email], USERPRINCIPALNAME()
+)
+
+// Versão com múltiplos estados por usuário
+VAR EmailAtual = USERPRINCIPALNAME()
+RETURN
+    dDim_Cliente[Estado] IN 
+    VALUES(
+        FILTER(dPermissoes, dPermissoes[Email] = EmailAtual)[Estado]
+    )
+
+// ── Testar RLS no Desktop ─────────────────────────────────
+// Modeling → View as → Selecionar role
+// Ou: Row Labels → "View as: Other user" → informe email
+
+// ── Boas práticas RLS ─────────────────────────────────────
+/*
+  ✅ Sempre testar com USERPRINCIPALNAME()
+  ✅ Tabela de permissões no próprio modelo
+  ✅ Usar grupos do Azure AD para roles (Service)
+  ✅ Documentar qual role acessa quais dados
+  ❌ Nunca confiar apenas em filtros visuais para segurança
+  ❌ Evitar RLS em tabelas de fato (use nas dimensões)
+*/
+```
+
+### 9. Otimização de Performance
+
+```dax
+// ── Performance Analyzer ──────────────────────────────────
+// View → Performance Analyzer → Start Recording
+// Clique nos visuais para ver tempo de resposta
+// Exportar JSON para análise detalhada
+
+// ── DAX Studio (Ferramenta Externa) ──────────────────────
+// Conectar ao Power BI Desktop aberto
+// Medir tempo de execução de medidas
+// Analisar plano de execução (Query Plan)
+// Ver métricas de Storage Engine vs Formula Engine
+
+// ── Boas Práticas de DAX ──────────────────────────────────
+/*
+  ✅ Preferir CALCULATE + ALL/REMOVEFILTERS a FILTER em tabelas grandes
+  ✅ Usar DIVIDE() em vez de / (trata divisão por zero)
+  ✅ Evitar COUNTROWS(FILTER(...)) → use CALCULATE(COUNT(), ...)
+  ✅ VAR/RETURN para cálculos usados múltiplas vezes
+  ✅ Medidas em vez de colunas calculadas (quando possível)
+  ❌ Evitar funções iteradoras (SUMX) em tabelas grandes
+  ❌ Nunca usar EARLIER() — substitua por VAR
+*/
+
+// ── Verificar cardinalidade ───────────────────────────────
+// Model View → clique na coluna → ver "Count of unique values"
+// Colunas com alta cardinalidade consomem mais memória
+// Exemplo: usar "Mês-Ano" em vez de "Data Completa" nas dimensões
+
+// ── Medida de diagnóstico ─────────────────────────────────
+DEBUG Contexto = 
+"Filtros ativos: " & 
+CONCATENATEX(
+    FILTERS(dDim_Cliente[Estado]),
+    [Estado], ", "
+)
+```
+
+### 10. Power BI Service — Publicação e Compartilhamento
+
+```
+FLUXO DE PUBLICAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. PUBLICAR (Desktop → Service)
+   Home → Publish → Selecionar Workspace
+
+2. CONFIGURAR GATEWAY (dados on-premises)
+   Manage Gateways → Add Data Source
+   
+3. AGENDAR ATUALIZAÇÃO
+   Dataset → Settings → Scheduled Refresh
+   Configurar horários (até 48x/dia no Premium)
+
+4. COMPARTILHAR
+   A) Compartilhar relatório (link direto)
+   B) Criar App no Workspace (mais profissional)
+   C) Publicar em SharePoint/Teams
+   D) Embutir em aplicação web (Embed Token)
+
+5. CRIAR DASHBOARD (Service)
+   Fixar visuais de relatórios → Dashboard
+   Adicionar tiles com dados em tempo real
+   Configurar alertas em cards e KPIs
+
+WORKSPACES:
+  Meu Workspace     → Uso pessoal/desenvolvimento
+  Workspace Equipe  → Colaboração (Pro/Premium)
+  
+LICENÇAS:
+  Free     → Publicar apenas em "Meu Workspace"
+  Pro      → Compartilhar com outros usuários Pro
+  Premium  → Volume, Paginated Reports, API avançada
+  Fabric   → Plataforma completa (Lakehouse + PBI)
+```
+
+---
+
+## 📋 Atalhos Essenciais Power BI
+
+| Ação | Atalho |
+|------|--------|
+| Nova medida | `Alt + N` |
+| Publicar | `Ctrl + Shift + P` |
+| Atualizar dados | `Alt + F5` |
+| Selecionar todos visuais | `Ctrl + A` |
+| Modo Focus no visual | `Enter` (visual selecionado) |
+| Desfazer | `Ctrl + Z` |
+| Salvar | `Ctrl + S` |
+| Abrir Power Query | `Ctrl + Alt + F5` |
+
+---
+
+## ✅ Checklist de Progresso
+
+### Básico
+- [ ] Conectar fontes de dados (Excel, SQL, Web)
+- [ ] Transformações básicas no Power Query
+- [ ] Criar relacionamentos entre tabelas
+- [ ] Modelo Estrela (Star Schema)
+- [ ] Visuais nativos principais
+- [ ] Filtros, slicers e interações
+
+### Intermediário
+- [ ] DAX: SUM, COUNT, AVERAGE, DIVIDE
+- [ ] CALCULATE com filtros
+- [ ] Funções de iteração (SUMX, AVERAGEX)
+- [ ] Time Intelligence (YTD, MoM, SPLY)
+- [ ] Tabela de datas personalizada
+- [ ] Formatação condicional avançada
+
+### Avançado
+- [ ] CALCULATE aprofundado (ALL, KEEPFILTERS, ALLSELECTED)
+- [ ] Row-Level Security (estático e dinâmico)
+- [ ] Otimização com DAX Studio
+- [ ] Dataflows no Service
+- [ ] Publicação e agendamento
+- [ ] Power BI Embedded (API)
+- [ ] Incremental Refresh

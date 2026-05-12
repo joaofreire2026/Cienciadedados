@@ -1,0 +1,596 @@
+# 🧱 Databricks — Do Básico ao Avançado
+
+> **Objetivo:** Dominar a plataforma Databricks para engenharia e ciência de dados em nuvem  
+> **Duração estimada:** 5 a 8 semanas  
+> **Pré-requisito:** Python Intermediário, Spark Básico
+
+---
+
+## 🗺️ Roadmap
+
+```
+SEMANA 1-2          SEMANA 3-4          SEMANA 5-6          SEMANA 7-8
+──────────          ──────────          ──────────          ──────────
+Workspace           Delta Lake          Unity Catalog       MLflow
+Clusters            Lakehouse           Data Lineage        Jobs & Workflows
+Notebooks           Medallion Arch.     Row-Level Sec.      CI/CD no DBX
+DBFS & Volumes      AutoLoader          Compartilhamento    APIs REST
+SQL Warehouse       DLT Básico          DLT Avançado        Cost Optimization
+```
+
+---
+
+## 🟢 NÍVEL BÁSICO
+
+### 1. Conceitos da Plataforma
+
+```
+DATABRICKS = Unified Data & AI Platform
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMPONENTES PRINCIPAIS:
+┌─────────────────────────────────────────────────────────┐
+│                    DATABRICKS PLATFORM                   │
+│                                                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │
+│  │  Data Eng.  │  │   Data Sci. │  │ SQL Analytics   │  │
+│  │  Pipelines  │  │   MLflow    │  │ SQL Warehouses  │  │
+│  └─────────────┘  └─────────────┘  └─────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │           Unity Catalog (Governança)              │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │        Delta Lake (Armazenamento ACID)            │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                          │
+│  Suporta: Azure (ADLS), AWS (S3), GCP (GCS)            │
+└─────────────────────────────────────────────────────────┘
+
+CONCEITOS-CHAVE:
+  • Workspace    → Ambiente colaborativo (como um IDE na nuvem)
+  • Cluster      → Conjunto de VMs para processamento Spark
+  • Notebook     → Interface interativa (Python, SQL, Scala, R)
+  • DBFS         → Databricks File System (abstração de armazenamento)
+  • SQL Warehouse → Motor otimizado para consultas SQL
+  • Jobs         → Orquestração de pipelines agendados
+```
+
+### 2. Trabalhando com Notebooks
+
+```python
+# ── Magic Commands ────────────────────────────────────────
+# Mudar linguagem na célula:
+# %python   %sql   %scala   %r   %sh   %md
+
+# ── Comandos de sistema ───────────────────────────────────
+# %sh
+# ls /dbfs/
+
+# ── Markdown ──────────────────────────────────────────────
+# %md
+# # Título do Notebook
+# ## Seção
+# - item 1
+# - item 2
+
+# ── Instalar bibliotecas (scope do cluster) ───────────────
+# %pip install delta-spark mlflow scikit-learn
+
+# ── Variáveis entre notebooks ─────────────────────────────
+# dbutils.notebook.run("outro_notebook", timeout_seconds=300,
+#                      arguments={"param1": "valor1"})
+
+# ── Widgets (parâmetros interativos) ─────────────────────
+dbutils.widgets.text("ambiente", "dev", "Ambiente")
+dbutils.widgets.dropdown("formato", "parquet", ["parquet", "delta", "csv"])
+
+AMBIENTE = dbutils.widgets.get("ambiente")
+FORMATO  = dbutils.widgets.get("formato")
+print(f"Executando em: {AMBIENTE} | Formato: {FORMATO}")
+
+# ── Display (melhor que show() no Databricks) ────────────
+df = spark.read.table("samples.nyctaxi.trips")
+display(df.limit(100))
+
+# ── dbutils.fs ───────────────────────────────────────────
+dbutils.fs.ls("/databricks-datasets/")
+dbutils.fs.mkdirs("/mnt/meu-projeto/raw/")
+dbutils.fs.cp("/origem/arquivo.parquet", "/destino/")
+dbutils.fs.rm("/temp/arquivo.csv", recurse=True)
+```
+
+### 3. Gerenciamento de Clusters
+
+```python
+# ── Tipos de Cluster ──────────────────────────────────────
+"""
+ALL-PURPOSE CLUSTER (Interativo)
+  • Para desenvolvimento e notebooks
+  • Inicia manual, fica ligado até desligar
+  • Custo maior — desligar quando não usar!
+  • Política de auto-termination recomendada: 30-60 min
+
+JOB CLUSTER (Automático)
+  • Criado automaticamente por Jobs
+  • Termina ao fim da execução
+  • Custo menor — use sempre em produção
+  • Não pode ser acessado interativamente
+  
+SQL WAREHOUSE
+  • Otimizado para Databricks SQL
+  • Serverless (recomendado) ou Pro
+  • Auto-pause e auto-scale
+  • Ideal para dashboards e BI tools
+"""
+
+# ── Configuração recomendada para desenvolvimento ─────────
+cluster_config = {
+    "cluster_name": "dev-cluster",
+    "spark_version": "14.3.x-scala2.12",
+    "node_type_id": "Standard_DS3_v2",   # Azure
+    "autotermination_minutes": 30,
+    "num_workers": 2,
+    "spark_conf": {
+        "spark.sql.adaptive.enabled": "true",
+        "spark.databricks.delta.optimizeWrite.enabled": "true"
+    },
+    "custom_tags": {
+        "projeto": "data-engineering",
+        "ambiente": "dev",
+        "responsavel": "joao.silva"
+    }
+}
+```
+
+### 4. Leitura e Escrita de Dados
+
+```python
+from pyspark.sql import functions as F
+
+# ── Leitura básica ────────────────────────────────────────
+# CSV
+df_csv = spark.read \
+    .option("header", "true") \
+    .option("inferSchema", "true") \
+    .option("sep", ";") \
+    .option("encoding", "UTF-8") \
+    .csv("abfss://raw@storage.dfs.core.windows.net/vendas/")
+
+# Parquet
+df_parquet = spark.read.parquet("/mnt/raw/pedidos/ano=2024/")
+
+# JSON (multilinha)
+df_json = spark.read \
+    .option("multiline", "true") \
+    .json("/mnt/raw/config/")
+
+# Delta
+df_delta = spark.read.format("delta").load("/mnt/gold/clientes")
+df_tabela = spark.read.table("catalog.schema.tabela")
+
+# ── Escrita ───────────────────────────────────────────────
+# Parquet com particionamento
+df.write \
+    .mode("overwrite") \
+    .partitionBy("ano", "mes") \
+    .parquet("/mnt/silver/vendas/")
+
+# Delta Table gerenciada
+df.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("catalog.silver.vendas")
+
+# Delta com opções avançadas
+df.write \
+    .format("delta") \
+    .mode("append") \
+    .option("mergeSchema", "true") \
+    .option("delta.dataSkippingNumIndexedCols", "5") \
+    .partitionBy("data_particao") \
+    .save("/mnt/gold/fatos_vendas/")
+```
+
+---
+
+## 🟡 NÍVEL INTERMEDIÁRIO
+
+### 5. Arquitetura Medallion (Lakehouse)
+
+```python
+# ══════════════════════════════════════════════════
+#  BRONZE → SILVER → GOLD
+# ══════════════════════════════════════════════════
+
+# ── BRONZE (Raw / Ingestão) ───────────────────────────────
+"""
+BRONZE = Dados brutos, como chegam da fonte
+  • SEM transformações de negócio
+  • Preservar dado original (auditoria)
+  • Adicionar metadados de ingestão
+  • Formato: Delta (preferencialmente)
+"""
+
+from datetime import datetime
+
+def ingerir_bronze(caminho_origem: str, tabela_destino: str, formato: str = "csv"):
+    df_raw = spark.read.format(formato) \
+        .option("header", "true") \
+        .load(caminho_origem)
+    
+    # Metadados de ingestão
+    df_bronze = df_raw \
+        .withColumn("_ingestion_timestamp", F.current_timestamp()) \
+        .withColumn("_source_file", F.input_file_name()) \
+        .withColumn("_ingestion_date", F.current_date())
+    
+    df_bronze.write \
+        .format("delta") \
+        .mode("append") \
+        .option("mergeSchema", "true") \
+        .saveAsTable(f"bronze.{tabela_destino}")
+    
+    print(f"✅ Bronze: {df_bronze.count()} registros ingeridos → {tabela_destino}")
+    return df_bronze
+
+# ── SILVER (Cleaned / Conformed) ─────────────────────────
+"""
+SILVER = Dados limpos e validados
+  • Remover duplicatas
+  • Corrigir tipos de dados
+  • Padronizar valores
+  • Aplicar regras de qualidade
+  • Unir fontes relacionadas
+"""
+
+def processar_silver(tabela_bronze: str, tabela_silver: str):
+    df = spark.read.table(f"bronze.{tabela_bronze}")
+    
+    df_silver = df \
+        .dropDuplicates(["id", "data_evento"]) \
+        .filter(F.col("id").isNotNull()) \
+        .withColumn("valor", F.col("valor").cast("double")) \
+        .withColumn("data_evento", F.to_date(F.col("data_str"), "dd/MM/yyyy")) \
+        .withColumn("nome", F.trim(F.upper(F.col("nome")))) \
+        .withColumn("_silver_timestamp", F.current_timestamp()) \
+        .drop("_source_file", "data_str")
+    
+    df_silver.write \
+        .format("delta") \
+        .mode("overwrite") \
+        .option("overwriteSchema", "true") \
+        .saveAsTable(f"silver.{tabela_silver}")
+
+# ── GOLD (Business / Serving) ─────────────────────────────
+"""
+GOLD = Dados prontos para consumo
+  • Agregações de negócio
+  • Métricas e KPIs
+  • Otimizados para consulta (wide tables)
+  • Para BI, dashboards, ML
+"""
+
+def construir_gold_vendas():
+    df_vendas    = spark.read.table("silver.vendas")
+    df_clientes  = spark.read.table("silver.clientes")
+    df_produtos  = spark.read.table("silver.produtos")
+    
+    df_gold = df_vendas \
+        .join(df_clientes, "cliente_id", "left") \
+        .join(df_produtos, "produto_id", "left") \
+        .groupBy("ano", "mes", "categoria", "regiao") \
+        .agg(
+            F.sum("valor_total").alias("receita"),
+            F.count("pedido_id").alias("qtd_pedidos"),
+            F.countDistinct("cliente_id").alias("clientes_unicos"),
+            F.avg("ticket_medio").alias("ticket_medio")
+        ) \
+        .withColumn("receita_formatada", F.format_number(F.col("receita"), 2))
+    
+    df_gold.write \
+        .format("delta") \
+        .mode("overwrite") \
+        .option("delta.autoOptimize.optimizeWrite", "true") \
+        .option("delta.autoOptimize.autoCompact", "true") \
+        .saveAsTable("gold.fato_vendas_mensal")
+```
+
+### 6. AutoLoader (Ingestão Incremental)
+
+```python
+# ── AutoLoader — detecta novos arquivos automaticamente ────
+df_stream = (spark.readStream
+    .format("cloudFiles")
+    .option("cloudFiles.format", "json")
+    .option("cloudFiles.schemaLocation", "/checkpoints/schema/pedidos")
+    .option("cloudFiles.inferColumnTypes", "true")
+    .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+    .load("abfss://raw@storage.dfs.core.windows.net/pedidos/")
+)
+
+# Processar e salvar
+df_processado = df_stream \
+    .withColumn("_loaded_at", F.current_timestamp()) \
+    .withColumn("_file", F.col("_metadata.file_path"))
+
+query = (df_processado.writeStream
+    .format("delta")
+    .outputMode("append")
+    .option("checkpointLocation", "/checkpoints/bronze/pedidos")
+    .option("mergeSchema", "true")
+    .trigger(availableNow=True)   # Executa uma vez e termina
+    .table("bronze.pedidos")
+)
+
+query.awaitTermination()
+print("✅ AutoLoader concluído!")
+```
+
+### 7. Delta Live Tables (DLT)
+
+```python
+# ── Pipeline DLT (definido em notebook) ──────────────────
+import dlt
+from pyspark.sql import functions as F
+
+# Bronze
+@dlt.table(
+    name="bronze_pedidos",
+    comment="Dados brutos de pedidos do e-commerce",
+    table_properties={"quality": "bronze"}
+)
+def bronze_pedidos():
+    return (spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "json")
+        .load("abfss://raw@storage.dfs.core.windows.net/pedidos/")
+    )
+
+# Silver com validação de qualidade
+@dlt.table(name="silver_pedidos", comment="Pedidos limpos e validados")
+@dlt.expect("id_nao_nulo", "pedido_id IS NOT NULL")
+@dlt.expect("valor_positivo", "valor_total > 0")
+@dlt.expect_or_drop("data_valida", "data_pedido >= '2020-01-01'")
+def silver_pedidos():
+    return (dlt.read_stream("bronze_pedidos")
+        .dropDuplicates(["pedido_id"])
+        .withColumn("valor_total", F.col("valor_total").cast("double"))
+        .withColumn("data_pedido", F.to_date("data_pedido"))
+    )
+
+# Gold
+@dlt.table(name="gold_resumo_diario", comment="KPIs diários de vendas")
+def gold_resumo_diario():
+    return (dlt.read("silver_pedidos")
+        .groupBy("data_pedido", "categoria")
+        .agg(
+            F.sum("valor_total").alias("receita"),
+            F.count("*").alias("total_pedidos"),
+            F.avg("valor_total").alias("ticket_medio")
+        )
+    )
+```
+
+---
+
+## 🔴 NÍVEL AVANÇADO
+
+### 8. MLflow no Databricks
+
+```python
+import mlflow
+import mlflow.sklearn
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+import pandas as pd
+import numpy as np
+
+# ── Configurar MLflow ─────────────────────────────────────
+mlflow.set_experiment("/Users/joao@empresa.com/experimento-churn")
+
+# ── Treinar com rastreamento ──────────────────────────────
+def treinar_modelo(df_spark, target_col: str = "churn"):
+    df = df_spark.toPandas()
+    X = df.drop(columns=[target_col])
+    y = df[target_col]
+    
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, stratify=y, random_state=42
+    )
+    
+    params = {
+        "n_estimators": [100, 200],
+        "max_depth": [3, 5, 7],
+        "learning_rate": [0.05, 0.1]
+    }
+    
+    with mlflow.start_run(run_name="GBT_GridSearch"):
+        mlflow.set_tags({
+            "modelo": "GradientBoosting",
+            "dataset": "churn_v2",
+            "responsavel": "joao.silva"
+        })
+        
+        gbt = GradientBoostingClassifier(random_state=42)
+        grid = GridSearchCV(gbt, params, cv=5, scoring="roc_auc", n_jobs=-1)
+        grid.fit(X_train, y_train)
+        
+        melhor_modelo = grid.best_estimator_
+        
+        # Log de parâmetros
+        mlflow.log_params(grid.best_params_)
+        
+        # Log de métricas
+        y_pred = melhor_modelo.predict(X_test)
+        y_proba = melhor_modelo.predict_proba(X_test)[:, 1]
+        
+        mlflow.log_metrics({
+            "accuracy":  accuracy_score(y_test, y_pred),
+            "f1_score":  f1_score(y_test, y_pred),
+            "roc_auc":   roc_auc_score(y_test, y_proba)
+        })
+        
+        # Registrar modelo
+        mlflow.sklearn.log_model(
+            melhor_modelo,
+            artifact_path="modelo",
+            registered_model_name="churn-predictor",
+            input_example=X_test.head(5)
+        )
+        
+        run_id = mlflow.active_run().info.run_id
+        print(f"✅ Run registrado: {run_id}")
+        return melhor_modelo, run_id
+
+# ── Carregar e aplicar modelo ─────────────────────────────
+def aplicar_modelo(run_id: str, df_novos):
+    model_uri = f"runs:/{run_id}/modelo"
+    modelo = mlflow.sklearn.load_model(model_uri)
+    
+    df_pandas = df_novos.toPandas()
+    probabilidades = modelo.predict_proba(df_pandas)[:, 1]
+    
+    df_pandas["prob_churn"] = probabilidades
+    df_pandas["classificacao"] = (probabilidades >= 0.5).astype(int)
+    
+    return spark.createDataFrame(df_pandas)
+```
+
+### 9. Jobs e Workflows
+
+```python
+# ── Configuração via API REST ──────────────────────────────
+job_config = {
+    "name": "Pipeline ETL Completo — Diário",
+    "schedule": {
+        "quartz_cron_expression": "0 0 6 * * ?",  # 06:00 UTC diário
+        "timezone_id": "America/Sao_Paulo"
+    },
+    "tasks": [
+        {
+            "task_key": "ingestao_bronze",
+            "notebook_task": {
+                "notebook_path": "/Repos/joao/pipeline/01_bronze_ingestao",
+                "base_parameters": {"ambiente": "prod"}
+            },
+            "job_cluster_key": "cluster_etl",
+            "timeout_seconds": 1800,
+            "max_retries": 2,
+            "retry_on_timeout": True
+        },
+        {
+            "task_key": "transformacao_silver",
+            "depends_on": [{"task_key": "ingestao_bronze"}],
+            "notebook_task": {
+                "notebook_path": "/Repos/joao/pipeline/02_silver_transform"
+            },
+            "job_cluster_key": "cluster_etl"
+        },
+        {
+            "task_key": "gold_metricas",
+            "depends_on": [{"task_key": "transformacao_silver"}],
+            "notebook_task": {
+                "notebook_path": "/Repos/joao/pipeline/03_gold_metricas"
+            },
+            "job_cluster_key": "cluster_etl"
+        },
+        {
+            "task_key": "notificacao_sucesso",
+            "depends_on": [{"task_key": "gold_metricas"}],
+            "webhook_notifications": {
+                "on_success": [{"id": "webhook_teams_id"}]
+            }
+        }
+    ],
+    "job_clusters": [{
+        "job_cluster_key": "cluster_etl",
+        "new_cluster": {
+            "spark_version": "14.3.x-scala2.12",
+            "node_type_id": "Standard_DS4_v2",
+            "num_workers": 4,
+            "spark_conf": {
+                "spark.sql.adaptive.enabled": "true"
+            }
+        }
+    }],
+    "email_notifications": {
+        "on_failure": ["dados@empresa.com"]
+    }
+}
+```
+
+### 10. Unity Catalog — Governança
+
+```sql
+-- ── Hierarquia: Catalog > Schema > Table ──────────────────
+
+-- Criar estrutura
+CREATE CATALOG IF NOT EXISTS producao
+  COMMENT 'Catálogo de produção';
+
+CREATE SCHEMA IF NOT EXISTS producao.gold
+  COMMENT 'Camada Gold — dados prontos para consumo';
+
+-- Criar tabela gerenciada
+CREATE TABLE IF NOT EXISTS producao.gold.fato_vendas (
+    pedido_id   BIGINT NOT NULL,
+    cliente_id  BIGINT,
+    data_pedido DATE,
+    valor_total DECIMAL(15, 2),
+    categoria   STRING
+)
+USING DELTA
+COMMENT 'Fato de vendas consolidado'
+TBLPROPERTIES (
+    'delta.enableChangeDataFeed' = 'true',
+    'delta.autoOptimize.optimizeWrite' = 'true'
+);
+
+-- ── Controle de acesso ────────────────────────────────────
+GRANT USE CATALOG  ON CATALOG producao TO `grupo-dados`;
+GRANT USE SCHEMA   ON SCHEMA producao.gold TO `grupo-dados`;
+GRANT SELECT       ON TABLE producao.gold.fato_vendas TO `analistas`;
+GRANT MODIFY       ON TABLE producao.gold.fato_vendas TO `engenheiros`;
+
+-- ── Row-Level Security com Row Filters ───────────────────
+CREATE FUNCTION producao.gold.filtro_regiao(regiao STRING)
+  RETURNS BOOLEAN
+  RETURN IS_ACCOUNT_GROUP_MEMBER(regiao) OR IS_ACCOUNT_GROUP_MEMBER('admin');
+
+ALTER TABLE producao.gold.fato_vendas
+  SET ROW FILTER producao.gold.filtro_regiao ON (regiao);
+
+-- ── Lineage ───────────────────────────────────────────────
+-- Automático no Unity Catalog — visualize no UI:
+-- Data Explorer → Tabela → Lineage tab
+```
+
+---
+
+## ✅ Checklist de Progresso
+
+### Básico
+- [ ] Navegar no Workspace Databricks
+- [ ] Criar e configurar cluster
+- [ ] Notebooks com magic commands e widgets
+- [ ] Usar dbutils.fs para manipular arquivos
+- [ ] Leitura e escrita básica com Spark
+
+### Intermediário
+- [ ] Arquitetura Medallion (Bronze/Silver/Gold)
+- [ ] Delta Lake avançado (MERGE, Time Travel)
+- [ ] AutoLoader para ingestão incremental
+- [ ] Delta Live Tables (DLT)
+- [ ] SQL Warehouses e Databricks SQL
+
+### Avançado
+- [ ] MLflow completo (tracking, registry, serving)
+- [ ] Jobs e Workflows com dependências
+- [ ] Unity Catalog e governança
+- [ ] Row-Level Security
+- [ ] Otimização de custos de cluster
+- [ ] CI/CD com Databricks Repos e Asset Bundles
